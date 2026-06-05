@@ -1,6 +1,6 @@
 {
   "name": "@comunica/config-query-sparql-next",
-  "version": "0.0.0",
+  "version": "5.0.0",
   "private": "true",
   "description": "default configuration files for Comunica SPARQL Next",
   "lsd:module": true,
