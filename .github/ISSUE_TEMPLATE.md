@@ -18,7 +18,7 @@ _Exact versions of the software in your environment, not just *latest*. Only nee
 | ------------------- | -------
 | Comunica Init Actor | <!-- In most cases, this will be the version of `@comunica/actor-init-sparql` -->
 | Comunica            | <!-- Only needed if you installed Comunica by cloning this repo -->
-| node                | 
+| node                |
 | npm                 | <!-- Only if installed using npm -->
 | yarn                | <!-- Only if installed using yarn -->
-| Operating System    | 
+| Operating System    |

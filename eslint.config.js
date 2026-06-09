@@ -22,32 +22,52 @@ module.exports = config([
       'ts/no-unsafe-argument': 'off',
       'ts/no-unsafe-assignment': 'off',
 
-      'ts/no-require-imports': [ 'error', { allow: [
-        'process/',
-        'web-streams-ponyfill',
-        'is-stream',
-        'readable-stream-node-to-web',
-        'stream-to-string',
-      ]}],
-      'ts/no-var-requires': [ 'error', { allow: [
-        'process/',
-        'web-streams-ponyfill',
-        'is-stream',
-        'readable-stream-node-to-web',
-        'stream-to-string',
-      ]}],
+      'ts/no-require-imports': [ 'error', {
+        allow: [
+          'process/',
+          'is-stream',
+          'readable-stream-node-to-web',
+        ],
+      }],
+      'ts/no-var-requires': [ 'error', {
+        allow: [
+          'process/',
+          'is-stream',
+          'readable-stream-node-to-web',
+        ],
+      }],
     },
   },
   {
     // Specific rules for NodeJS-specific files
     files: [
       '**/test/**/*.ts',
+      '**/__mocks__/*.js',
     ],
     rules: {
       'import/no-nodejs-modules': 'off',
-      'unused-imports/no-unused-vars': 'off',
       'ts/no-require-imports': 'off',
       'ts/no-var-requires': 'off',
+    },
+  },
+  {
+    files: [
+      // Browser versions of files cannot follow the camelCase naming scheme
+      '**/*-browser.ts',
+      // The funding YAML file needs the specific uppercase name
+      '.github/FUNDING.yml',
+    ],
+    rules: {
+      'unicorn/filename-case': 'off',
+    },
+  },
+  {
+    // Only the packager makes use of dynamic require
+    files: [
+      'packages/packager/bin/package.ts',
+    ],
+    rules: {
+      'import/no-dynamic-require': 'off',
     },
   },
   {
@@ -61,36 +81,60 @@ module.exports = config([
   },
   {
     // Some test files import 'jest-rdf' which triggers this
-    // The http actors import 'cross-fetch/polyfill' which also triggers this
     // Some jest tests import '../../lib' which triggers this
     files: [
       '**/test/*-test.ts',
       '**/test/*-util.ts',
+      'packages/jest/test/matchers/*-test.ts',
     ],
     rules: {
       'import/no-unassigned-import': 'off',
     },
   },
   {
-    // Files that do not require linting
-    ignores: [
-      'setup-jest.js',
-      '**/engine-default.js',
-      '**/engine-browser.js',
-      '**/comunica-browser.js',
-      '.github/**',
-      '**/bintest/**',
-      'lerna.json',
+    // Spec test engines
+    files: [
+      '**/spec/*.js',
     ],
+    rules: {
+      'import/extensions': 'off',
+      'ts/no-var-requires': 'off',
+      'ts/no-require-imports': 'off',
+      'import/no-extraneous-dependencies': 'off',
+    },
   },
   {
-    files: [ '**/*.js' ],
+    // Webpack configurations
+    files: [
+      '**/webpack.config.js',
+    ],
     rules: {
-      'ts/no-require-imports': 'off',
       'ts/no-var-requires': 'off',
-      'import/no-nodejs-modules': 'off',
-      'import/no-extraneous-dependencies': 'off',
+      'ts/no-require-imports': 'off',
       'import/extensions': 'off',
+      'import/no-extraneous-dependencies': 'off',
+      'import/no-nodejs-modules': 'off',
     },
+  },
+  {
+    files: [
+      'eslint.config.js',
+    ],
+    rules: {
+      'ts/no-var-requires': 'off',
+      'ts/no-require-imports': 'off',
+    },
+  },
+  {
+    ignores: [
+      // The engine bundles are auto-generated code
+      'engines/*/engine-default.js',
+      'engines/*/engine-browser.js',
+      'engines/*/comunica-browser.js',
+      // Dev-only files that are not checked in
+      '**/bintest/**',
+      '**/componentsjs-error-state.json',
+      'lerna.json',
+    ],
   },
 ]);
