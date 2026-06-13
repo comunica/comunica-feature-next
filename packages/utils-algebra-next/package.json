@@ -1,0 +1,46 @@
+{
+  "name": "@comunica/utils-algebra-next",
+  "version": "0.0.0",
+  "description": "Query algebra Next definitions and utilities",
+  "license": "MIT",
+  "funding": {
+    "type": "opencollective",
+    "url": "https://opencollective.com/comunica-association"
+  },
+  "homepage": "https://comunica.dev/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/comunica/comunica-feature-next.git",
+    "directory": "packages/utils-algebra-next"
+  },
+  "bugs": {
+    "url": "https://github.com/comunica/comunica/issues"
+  },
+  "keywords": [
+    "comunica",
+    "algebra",
+    "next"
+  ],
+  "sideEffects": false,
+  "main": "lib/index.js",
+  "typings": "lib/index",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "lib/**/*.d.ts",
+    "lib/**/*.js",
+    "lib/**/*.js.map"
+  ],
+  "scripts": {
+    "build": "yarn run build:ts",
+    "build:ts": "node \"../../node_modules/typescript/bin/tsc\""
+  },
+  "dependencies": {
+    "@comunica/utils-algebra": "^5.2.0",
+    "@rdfjs/types": "*",
+    "@traqula/algebra-transformations-1-2": "^1.0.1",
+    "@traqula/core": "^1.0.0",
+    "rdf-terms": "^2.0.0"
+  }
+}

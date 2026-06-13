@@ -39,8 +39,8 @@
   },
   "devDependencies": {
     "@comunica/packager": "^5.0.0",
-    "@comunica/utils-jest": "^5.1.3",
-    "@comunica/utils-monorepo": "^5.1.1",
+    "@comunica/utils-jest": "^5.2.3",
+    "@comunica/utils-monorepo": "^5.2.1",
     "@playwright/test": "^1.58.2",
     "@pollyjs/persister-fs": "^6.0.5",
     "@rubensworks/eslint-config": "^3.0.0",
@@ -85,6 +85,16 @@
     "test"
   ],
   "resolutions": {
+    "@traqula/algebra-sparql-1-1": "1.1.4",
+    "@traqula/algebra-sparql-1-2": "1.1.4",
+    "@traqula/algebra-transformations-1-1": "1.1.4",
+    "@traqula/algebra-transformations-1-2": "1.1.4",
+    "@traqula/chevrotain": "1.1.0",
+    "@traqula/core": "1.1.4",
+    "@traqula/parser-sparql-1-1": "1.1.4",
+    "@traqula/parser-sparql-1-2": "1.1.4",
+    "@traqula/rules-sparql-1-1": "1.1.4",
+    "@traqula/rules-sparql-1-2": "1.1.4",
     "rdf-parse": "5.0.0"
   }
 }

@@ -18,9 +18,11 @@
     "inlineSources": true,
     "preserveConstEnums": true,
     "removeComments": false,
-    "sourceMap": true
+    "sourceMap": true,
+    "skipLibCheck": true
   },
   "include": [
+    "jest.setup.ts",
     "engines/*/bin/**/*",
     "engines/*/lib/**/*",
     "packages/*/bin/**/*",

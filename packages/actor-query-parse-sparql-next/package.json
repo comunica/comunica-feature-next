@@ -1,0 +1,60 @@
+{
+  "name": "@comunica/actor-query-parse-sparql-next",
+  "version": "0.0.0",
+  "description": "A algebra sparql-next parse actor",
+  "lsd:module": true,
+  "license": "MIT",
+  "funding": {
+    "type": "opencollective",
+    "url": "https://opencollective.com/comunica-association"
+  },
+  "homepage": "https://comunica.dev/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/comunica/comunica-feature-next.git",
+    "directory": "packages/actor-query-parse-sparql-next"
+  },
+  "bugs": {
+    "url": "https://github.com/comunica/comunica-feature-next/issues"
+  },
+  "keywords": [
+    "comunica",
+    "actor",
+    "sparql-next-parse",
+    "algebra"
+  ],
+  "sideEffects": false,
+  "main": "lib/index.js",
+  "typings": "lib/index",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "components",
+    "lib/**/*.d.ts",
+    "lib/**/*.js",
+    "lib/**/*.js.map"
+  ],
+  "scripts": {
+    "build": "yarn run build:ts && yarn run build:components",
+    "build:ts": "node \"../../node_modules/typescript/bin/tsc\"",
+    "build:components": "componentsjs-generator"
+  },
+  "dependencies": {
+    "@comunica/bus-query-parse": "^5.2.3",
+    "@comunica/context-entries": "^5.2.3",
+    "@comunica/core": "^5.2.3",
+    "@comunica/types": "^5.2.3",
+    "@comunica/utils-algebra": "^5.2.0",
+    "@traqula/algebra-sparql-1-2": "^1.1.4",
+    "@traqula/algebra-transformations-1-2": "^1.1.4",
+    "@traqula/core": "^1.1.4",
+    "@traqula/parser-sparql-1-2": "^1.1.4",
+    "@traqula/rules-sparql-1-1": "^1.1.4",
+    "@traqula/rules-sparql-1-1-adjust": "^1.1.4",
+    "@traqula/rules-sparql-1-2": "^1.1.4"
+  },
+  "devDependencies": {
+    "@traqula/test-utils": "^1.1.3"
+  }
+}

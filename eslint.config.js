@@ -135,6 +135,8 @@ module.exports = config([
       '**/bintest/**',
       '**/componentsjs-error-state.json',
       'lerna.json',
+      // Generated declaration files in root (not part of any package)
+      'jest.setup.d.ts',
     ],
   },
 ]);

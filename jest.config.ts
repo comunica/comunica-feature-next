@@ -17,6 +17,9 @@ const config: Config.InitialOptions = {
       statements: 100,
     },
   },
+  moduleNameMapper: {
+    '^vitest$': '<rootDir>/__mocks__/vitest.js',
+  },
   moduleFileExtensions: [
     'ts',
     'js',
@@ -25,6 +28,9 @@ const config: Config.InitialOptions = {
   testMatch: [
     '<rootDir>/engines/*/test/**/*-test.ts',
     '<rootDir>/packages/*/test/**/*-test.ts',
+  ],
+  setupFilesAfterEnv: [
+    '<rootDir>/jest.setup.ts',
   ],
   transform: {
     '\\.ts$': [ 'ts-jest', {
