@@ -31,6 +31,7 @@
     "@comunica/utils-expression-evaluator": "^5.2.3"
   },
   "devDependencies": {
-    "@comunica/actor-query-parse-sparql-next": "^0.0.0"
+    "@comunica/actor-query-parse-sparql-next": "^0.0.0",
+    "@comunica/utils-jest": "^5.2.3"
   }
 }
