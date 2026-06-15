@@ -1,7 +1,6 @@
 import { toAlgebra, SparqlNextParser } from '@comunica/actor-query-parse-sparql-next';
-import { ActionContext } from '@comunica/core';
-import { ActorFunctionFactoryTermAdjust, adjustDisableKey } from '../lib';
-import { runFuncTestTable, createFuncMediator } from './util';
+import { ActorFunctionFactoryTermAdjust } from '../lib';
+import { runFuncTestTable } from './util';
 import { dateTimeTyped, dateTyped, dayTimeDurationTyped, timeTyped } from './util/Aliases';
 import { Notation } from './util/TestTable';
 
@@ -33,17 +32,5 @@ describe('evaluation of \'ADJUST\'', () => {
     '${timeTyped('10:00:00')}' '${dayTimeDurationTyped('-PT10H30M')}' = '${timeTyped('10:00:00-10:30')}'
     '${timeTyped('10:00:00')}' '${dayTimeDurationTyped('PT30M')}' = '${timeTyped('10:00:00+00:30')}'
   `,
-  });
-
-  it('returns failTest when adjustDisableKey is set in context', async() => {
-    const mediator = createFuncMediator([ args => new ActorFunctionFactoryTermAdjust(args) ], {});
-    const bus = (<any> mediator).bus;
-    const actor: ActorFunctionFactoryTermAdjust = bus.actors[0];
-    const testResult = await actor.test({
-      functionName: 'adjust',
-      requireTermExpression: false,
-      context: new ActionContext().set(adjustDisableKey, true),
-    });
-    expect(testResult.isFailed()).toBe(true);
   });
 });

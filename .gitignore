@@ -6,6 +6,7 @@ yarn-error.log
 *.js
 *.js.map
 *.d.ts
+!__mocks__/*.js
 **/lib/**/*.js
 **/lib/**/*.js.map
 **/lib/**/*.d.ts
