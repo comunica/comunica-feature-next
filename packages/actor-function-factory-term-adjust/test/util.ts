@@ -5,9 +5,9 @@ import type {
 } from '@comunica/bus-function-factory';
 import { BusFunctionFactory } from '@comunica/bus-function-factory';
 import { MediatorRace } from '@comunica/mediator-race';
-import { getMockEEFactory } from './util/helpers';
-import type { TestTableConfig } from './util/utils';
-import { runTestTable } from './util/utils';
+import { getMockEEFactory } from '@comunica/utils-expression-evaluator/lib/test-util/helpers';
+import type { TestTableConfig } from '@comunica/utils-expression-evaluator/lib/test-util/utils';
+import { runTestTable } from '@comunica/utils-expression-evaluator/lib/test-util/utils';
 
 interface RunFuncTestTableArgs extends IActorFunctionFactoryArgs {
   mediatorFunctionFactory: MediatorFunctionFactory;

@@ -1,8 +1,13 @@
 import { toAlgebra, SparqlNextParser } from '@comunica/actor-query-parse-sparql-next';
+import {
+  dateTimeTyped,
+  dateTyped,
+  dayTimeDurationTyped,
+  timeTyped,
+} from '@comunica/utils-expression-evaluator/lib/test-util/Aliases';
+import { Notation } from '@comunica/utils-expression-evaluator/lib/test-util/TestTable';
 import { ActorFunctionFactoryTermAdjust } from '../lib';
 import { runFuncTestTable } from './util';
-import { dateTimeTyped, dateTyped, dayTimeDurationTyped, timeTyped } from './util/Aliases';
-import { Notation } from './util/TestTable';
 
 describe('evaluation of \'ADJUST\'', () => {
   const parser = new SparqlNextParser({ lexerConfig: { positionTracking: 'full' }});
