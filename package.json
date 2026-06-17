@@ -7,7 +7,9 @@
     "packages/*",
     "performance/*",
     "./traqula",
-    "./comunica"
+    "./comunica",
+    "comunica/packages/*",
+    "comunica/engines/*"
   ],
   "scripts": {
     "build": "npm run build:ts && npm run build:components",

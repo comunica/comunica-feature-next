@@ -5,9 +5,9 @@ import {
   dayTimeDurationTyped,
   Notation,
   timeTyped,
+  runFuncTestTable,
 } from '@comunica/utils-jest';
 import { ActorFunctionFactoryTermAdjust } from '../lib';
-import { runFuncTestTable } from './util';
 
 describe('evaluation of \'ADJUST\'', () => {
   const parser = new SparqlNextParser({ lexerConfig: { positionTracking: 'full' }});
