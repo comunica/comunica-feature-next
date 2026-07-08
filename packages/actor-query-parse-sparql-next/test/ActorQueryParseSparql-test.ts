@@ -4,7 +4,7 @@ import { ActionContext, Bus } from '@comunica/core';
 import type { IActionContext } from '@comunica/types';
 import { AlgebraFactory } from '@comunica/utils-algebra';
 import { DataFactory } from 'rdf-data-factory';
-import { ActorQueryParseSparql } from '../lib';
+import { ActorQueryParseSparqlNext } from '../lib';
 import '@comunica/utils-jest';
 
 const DF = new DataFactory();
@@ -19,27 +19,27 @@ describe('ActorQueryParseSparql', () => {
 
   describe('The ActorQueryParseSparql module', () => {
     it('should be a function', () => {
-      expect(ActorQueryParseSparql).toBeInstanceOf(Function);
+      expect(ActorQueryParseSparqlNext).toBeInstanceOf(Function);
     });
 
     it('should be a ActorQueryParseSparql constructor', () => {
-      expect(new (<any> ActorQueryParseSparql)({ name: 'actor', bus })).toBeInstanceOf(ActorQueryParseSparql);
-      expect(new (<any> ActorQueryParseSparql)({ name: 'actor', bus })).toBeInstanceOf(ActorQueryParse);
+      expect(new (<any> ActorQueryParseSparqlNext)({ name: 'actor', bus })).toBeInstanceOf(ActorQueryParseSparqlNext);
+      expect(new (<any> ActorQueryParseSparqlNext)({ name: 'actor', bus })).toBeInstanceOf(ActorQueryParse);
     });
 
     it('should not be able to create new ActorQueryParseSparql objects without \'new\'', () => {
       expect(() => {
-        (<any> ActorQueryParseSparql)();
-      }).toThrow(`Class constructor ActorQueryParseSparql cannot be invoked without 'new'`);
+        (<any> ActorQueryParseSparqlNext)();
+      }).toThrow(`Class constructor ActorQueryParseSparqlNext cannot be invoked without 'new'`);
     });
   });
 
   describe('An ActorQueryParseSparql instance', () => {
-    let actor: ActorQueryParseSparql;
+    let actor: ActorQueryParseSparqlNext;
     let context: IActionContext;
 
     beforeEach(() => {
-      actor = new ActorQueryParseSparql({ name: 'actor', bus });
+      actor = new ActorQueryParseSparqlNext({ name: 'actor', bus });
       context = new ActionContext({ [KeysInitQuery.dataFactory.name]: DF });
     });
 

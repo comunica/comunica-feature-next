@@ -1,7 +1,7 @@
 {
   "name": "@comunica/actor-query-parse-sparql-next",
   "version": "0.0.0",
-  "description": "A algebra sparql-next parse actor",
+  "description": "A SPARQL parsing actor that translates non-standard, experimental SPARQL syntax (sparql-next) into SPARQL Algebra",
   "lsd:module": true,
   "license": "MIT",
   "funding": {

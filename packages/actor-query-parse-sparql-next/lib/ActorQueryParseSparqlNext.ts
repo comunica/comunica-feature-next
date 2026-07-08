@@ -11,7 +11,7 @@ import { SparqlNextParser } from './parser';
 /**
  * A comunica Algebra SPARQL Next Parse Actor.
  */
-export class ActorQueryParseSparql extends ActorQueryParse {
+export class ActorQueryParseSparqlNext extends ActorQueryParse {
   public readonly prefixes: Record<string, string> | undefined;
   private readonly parser: SparqlNextParser;
 

@@ -9,7 +9,7 @@
   "actors": [
     {
       "@id": "urn:comunica:default:query-parse/actors#sparql",
-      "@type": "ActorQueryParseSparql"
+      "@type": "ActorQueryParseSparqlNext"
     },
     {
       "@id": "urn:comunica:default:query-parse/actors#graphql",

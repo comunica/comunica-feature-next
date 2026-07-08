@@ -8,6 +8,7 @@ const config: Config.InitialOptions = {
     'engine-default.js',
     'index.js',
     '<rootDir>/comunica/',
+    '<rootDir>/traqula/',
   ],
   coverageProvider: 'babel',
   coverageThreshold: {
@@ -36,7 +37,7 @@ const config: Config.InitialOptions = {
   transform: {
     '\\.ts$': [ 'ts-jest', {
       // Enabling this can fix issues when using prereleases of typings packages
-      // isolatedModules: true,
+      isolatedModules: true,
     }],
   },
   // The default test timeout is not enough for engine tests, but is enough for packages
