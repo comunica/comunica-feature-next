@@ -107,4 +107,75 @@ describe('a SPARQL 1.2 parser', () => {
     const algebra = toAlgebra(parsed);
     expect(toAst(algebra)).toBeDefined();
   });
+
+  describe('GRAPH operators inside CONSTRUCT templates', () => {
+    const parser = new SparqlNextParser();
+    const graphContext = { prefixes: { ex: 'http://example.org/' }};
+
+    it('parses a GRAPH block inside the CONSTRUCT template', () => {
+      const query = 'CONSTRUCT { ?s ?p ?o . GRAPH ?g { ?a ?b ?c } } WHERE { ?s ?p ?o }';
+      const parsed = <any> parser.parse(query, graphContext);
+      const templateTriples = parsed.template.triples;
+      expect(templateTriples).toHaveLength(2);
+      expect(templateTriples[0].type).toBe('triple');
+      expect(templateTriples[1].type).toBe('graph');
+      expect(templateTriples[1].graph.value).toBe('g');
+    });
+
+    it('assigns the graph of a named GRAPH block to the CONSTRUCT quads', () => {
+      const query =
+        'CONSTRUCT { GRAPH <http://example.org/g> { ?a ?b ?c } } WHERE { ?s ?p ?o }';
+      const parsed = parser.parse(query, graphContext);
+      const algebra = <any> toAlgebra(parsed, { prefixes: graphContext.prefixes });
+      const template = algebra.template;
+      expect(template).toHaveLength(1);
+      expect(template[0].graph.termType).toBe('NamedNode');
+      expect(template[0].graph.value).toBe('http://example.org/g');
+    });
+
+    it('assigns the graph of a variable GRAPH block to the CONSTRUCT quads', () => {
+      const query = 'CONSTRUCT { GRAPH ?g { ?a ?b ?c } } WHERE { ?s ?p ?o }';
+      const parsed = parser.parse(query, graphContext);
+      const algebra = <any> toAlgebra(parsed, { prefixes: graphContext.prefixes });
+      const template = algebra.template;
+      expect(template).toHaveLength(1);
+      expect(template[0].graph.termType).toBe('Variable');
+      expect(template[0].graph.value).toBe('g');
+    });
+
+    it('keeps triples outside GRAPH blocks in the default graph', () => {
+      const query =
+        'CONSTRUCT { ?s ?p ?o . GRAPH ?g { ?a ?b ?c } } WHERE { ?s ?p ?o }';
+      const parsed = parser.parse(query, graphContext);
+      const algebra = <any> toAlgebra(parsed, { prefixes: graphContext.prefixes });
+      const template = algebra.template;
+      expect(template).toHaveLength(2);
+      const [ defaultQuad, graphQuad ] = template;
+      expect(defaultQuad.graph.termType).toBe('DefaultGraph');
+      expect(graphQuad.graph.termType).toBe('Variable');
+      expect(graphQuad.graph.value).toBe('g');
+    });
+
+    it('applies the graph to every quad expanded from a collection', () => {
+      const query =
+        'CONSTRUCT { GRAPH ?g { ?s ex:p ( ex:a ex:b ) } } WHERE { ?s ?p ?o }';
+      const parsed = parser.parse(query, graphContext);
+      const algebra = <any> toAlgebra(parsed, { prefixes: graphContext.prefixes });
+      const template = algebra.template;
+      expect(template.length).toBeGreaterThan(1);
+      for (const quad of template) {
+        expect(quad.graph.termType).toBe('Variable');
+        expect(quad.graph.value).toBe('g');
+      }
+    });
+
+    it('still produces default-graph quads when no GRAPH block is used', () => {
+      const query = 'CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }';
+      const parsed = parser.parse(query, graphContext);
+      const algebra = <any> toAlgebra(parsed, { prefixes: graphContext.prefixes });
+      const template = algebra.template;
+      expect(template).toHaveLength(1);
+      expect(template[0].graph.termType).toBe('DefaultGraph');
+    });
+  });
 });

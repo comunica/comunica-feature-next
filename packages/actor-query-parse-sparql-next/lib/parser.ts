@@ -5,6 +5,7 @@ import { gram as gram11 } from '@traqula/rules-sparql-1-1';
 import { gram as gramAdj } from '@traqula/rules-sparql-1-1-adjust';
 import type * as T12 from '@traqula/rules-sparql-1-2';
 import { gram as gram12, completeParseContext, copyParseContext } from '@traqula/rules-sparql-1-2';
+import { constructTemplateGraphPatch } from './constructTemplateGraph';
 import { sparqlNextLexerBuilder } from './lexer';
 
 /**
@@ -26,7 +27,8 @@ export const sparqlNextParserBuilder = ParserBuilder
   .patchRule(gram11.prologue)
   .patchRule(gram12.prologue)
   .addRule(gramAdj.builtInAdjust)
-  .patchRule(builtInPatch);
+  .patchRule(builtInPatch)
+  .patchRule(constructTemplateGraphPatch);
 
 export type FullSparqlNextParser = ReturnType<typeof sparqlNextParserBuilder.build>;
 
