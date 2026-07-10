@@ -1,7 +1,6 @@
 {
   "name": "@comunica/config-query-sparql-next",
   "version": "0.0.0",
-  "private": "true",
   "description": "default configuration files for Comunica SPARQL Next",
   "lsd:module": true,
   "license": "MIT",
@@ -30,6 +29,9 @@
   "sideEffects": false,
   "main": "lib/index.js",
   "typings": "lib/index",
+  "publishConfig": {
+    "access": "public"
+  },
   "files": [
     "components",
     "config",
