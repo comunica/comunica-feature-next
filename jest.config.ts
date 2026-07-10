@@ -26,6 +26,9 @@ const config: Config.InitialOptions = {
     '<rootDir>/engines/*/test/**/*-test.ts',
     '<rootDir>/packages/*/test/**/*-test.ts',
   ],
+  setupFilesAfterEnv: [
+    '<rootDir>/jest.setup.ts',
+  ],
   transform: {
     '\\.ts$': [ 'ts-jest', {
       // Enabling this can fix issues when using prereleases of typings packages

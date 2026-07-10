@@ -72,6 +72,10 @@ jobs:
         run: yarn run build
       - name: Run tests
         run: yarn run test-ci
+      # TODO: Needed until https://github.com/coverallsapp/github-action/pull/265
+      - name: Trust Coveralls Homebrew tap (Homebrew 6 requirement)
+        if: runner.os == 'macOS'
+        run: brew trust coverallsapp/coveralls
       - name: Submit coverage results
         uses: coverallsapp/github-action@v2
         with:
@@ -231,100 +235,12 @@ jobs:
         run: sh -c "`curl -fsSl https://raw.githubusercontent.com/rubensworks/lerna-docker/master/install.sh`"
       - name: Build Docker images
         run: ~/.lerna-docker/bin/lerna-docker comunica build
-      - name: Deploy Docker images
-        if: startsWith(github.ref, 'refs/heads/master') || startsWith(github.ref, 'refs/tags/')
-        run: ~/.lerna-docker/bin/lerna-docker comunica push
-        env:
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-
-  performance:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        benchmark:
-          - web
-    needs:
-      - test
-      - lint
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-      - name: Use Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 26.x
-      - name: Install dependencies
-        run: yarn install
-      - name: Run benchmarks
-        run: cd performance/benchmark-${{ matrix.benchmark }}/ && yarn run performance:ci
-      - uses: actions/upload-artifact@v7
-        with:
-          name: performance-benchmark-${{ matrix.benchmark }}
-          path: performance/benchmark-${{ matrix.benchmark }}/combinations/combination_0/output/
-
-  performance-consolidate:
-    needs:
-      - performance
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-      - name: Use Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 26.x
-      - uses: actions/download-artifact@v8
-        with:
-          name: performance-benchmark-web
-          path: performance/benchmark-web/combinations/combination_0/output/
-      - name: Process benchmark detailed results
-        run: npx -p @rubensworks/process-sparql-benchmark-results psbr csv ghbench performance/benchmark-web/combinations/combination_0/output/ --overrideCombinationLabels Web --total false --detailed true --name ghbench-detail.json
-      - name: Process benchmark total results
-        run: npx -p @rubensworks/process-sparql-benchmark-results psbr csv ghbench performance/benchmark-web/combinations/combination_0/output/ --overrideCombinationLabels Web --total true --detailed false --name ghbench-total.json
-      - name: Determine benchmark detailed results target directory name
-        run: echo "BENCHMARK_DATA_DIR_PATH_DETAIL=comunica-feature-next/${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}/benchmarks-detail" >> $GITHUB_ENV
-      - name: Determine benchmarks total results target directory name
-        run: echo "BENCHMARK_DATA_DIR_PATH_TOTAL=comunica-feature-next/${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}/benchmarks-total" >> $GITHUB_ENV
-      - name: Finalize benchmarks detailed results
-        if: startsWith(github.ref, 'refs/heads/master') || startsWith(github.ref, 'refs/tags/') || startsWith(github.ref, 'refs/heads/feature') || startsWith(github.ref, 'refs/heads/next')
-        uses: benchmark-action/github-action-benchmark@v1
-        with:
-          name: Benchmarks detailed results
-          tool: customSmallerIsBetter
-          output-file-path: ghbench-detail.json
-          github-token: ${{ secrets.PAT }}
-          auto-push: true
-          alert-comment-cc-users: '@rubensworks'
-          gh-repository: github.com/comunica/comunica-performance-results
-          gh-pages-branch: master
-          benchmark-data-dir-path: ${{ env.BENCHMARK_DATA_DIR_PATH_DETAIL }}
-      - name: Cleanup benchmark-action data
-        run: rm -rf ./benchmark-data-repository
-      - name: Finalize benchmarks total results
-        if: startsWith(github.ref, 'refs/heads/master') || startsWith(github.ref, 'refs/tags/') || startsWith(github.ref, 'refs/heads/feature') || startsWith(github.ref, 'refs/heads/next')
-        uses: benchmark-action/github-action-benchmark@v1
-        with:
-          name: Benchmarks total results
-          tool: customSmallerIsBetter
-          output-file-path: ghbench-total.json
-          github-token: ${{ secrets.PAT }}
-          auto-push: true
-          alert-threshold: '150%'
-          comment-always: true
-          comment-on-alert: true
-          alert-comment-cc-users: '@rubensworks'
-          fail-on-alert: true
-          summary-always: true
-          gh-repository: github.com/comunica/comunica-performance-results
-          gh-pages-branch: master
-          benchmark-data-dir-path: ${{ env.BENCHMARK_DATA_DIR_PATH_TOTAL }}
-      - name: Prepare comment on commit with link to performance results
-        run: echo -e "Performance benchmarks succeeded! 🚀\n\n\[[Summarized results](https://comunica.github.io/comunica-performance-results/comunica-feature-next/${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}/benchmarks-total/)\] \[[Detailed results](https://comunica.github.io/comunica-performance-results/comunica-feature-next/${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}/benchmarks-detail/)\]" > ./commit-comment-body.txt
-      - name: Comment on commit with link to performance results
-        uses: peter-evans/commit-comment@v4
-        with:
-          body-path: ./commit-comment-body.txt
+  #   - name: Deploy Docker images
+  #     if: startsWith(github.ref, 'refs/heads/master') || startsWith(github.ref, 'refs/tags/')
+  #     run: ~/.lerna-docker/bin/lerna-docker comunica push
+  #     env:
+  #       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+  #       DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
   documentation:
     name: Prepare documentation

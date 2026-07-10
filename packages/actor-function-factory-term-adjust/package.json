@@ -1,0 +1,32 @@
+{
+  "name": "@comunica/actor-function-factory-term-adjust",
+  "version": "0.0.0",
+  "private": "true",
+  "description": "A term-adjust function-factory actor",
+  "lsd:module": true,
+  "license": "MIT",
+  "keywords": [
+    "comunica",
+    "actor",
+    "function-factory",
+    "term-function-adjust"
+  ],
+  "sideEffects": false,
+  "main": "lib/index.js",
+  "typings": "lib/index",
+  "files": [
+    "components",
+    "lib/**/*.d.ts",
+    "lib/**/*.js",
+    "lib/**/*.js.map"
+  ],
+  "scripts": {
+    "build": "yarn run build:ts && yarn run build:components",
+    "build:ts": "node \"../../node_modules/typescript/bin/tsc\"",
+    "build:components": "componentsjs-generator"
+  },
+  "dependencies": {
+    "@comunica/bus-function-factory": "^5.3.0",
+    "@comunica/utils-expression-evaluator": "^5.3.0"
+  }
+}

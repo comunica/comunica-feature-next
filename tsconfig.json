@@ -21,6 +21,7 @@
     "sourceMap": true
   },
   "include": [
+    "jest.setup.ts",
     "engines/*/bin/**/*",
     "engines/*/lib/**/*",
     "packages/*/bin/**/*",

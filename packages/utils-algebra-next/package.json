@@ -1,8 +1,7 @@
 {
-  "name": "@comunica/config-query-sparql-next",
+  "name": "@comunica/utils-algebra-next",
   "version": "0.0.0",
-  "description": "default configuration files for Comunica SPARQL Next",
-  "lsd:module": true,
+  "description": "Query algebra Next definitions and utilities",
   "license": "MIT",
   "funding": {
     "type": "opencollective",
@@ -12,18 +11,14 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/comunica/comunica-feature-next.git",
-    "directory": "engines/config-query-sparql-next"
+    "directory": "packages/utils-algebra-next"
   },
   "bugs": {
-    "url": "https://github.com/comunica/comunica-feature-next/issues"
+    "url": "https://github.com/comunica/comunica/issues"
   },
   "keywords": [
     "comunica",
-    "sparql",
-    "engine",
-    "query",
-    "update",
-    "config",
+    "algebra",
     "next"
   ],
   "sideEffects": false,
@@ -33,18 +28,15 @@
     "access": "public"
   },
   "files": [
-    "components",
-    "config",
     "lib/**/*.d.ts",
     "lib/**/*.js",
     "lib/**/*.js.map"
   ],
   "scripts": {
-    "build": "npm run build:ts && npm run build:components",
-    "build:ts": "node \"../../node_modules/typescript/bin/tsc\"",
-    "build:components": "componentsjs-generator"
+    "build": "yarn run build:ts",
+    "build:ts": "node \"../../node_modules/typescript/bin/tsc\""
   },
   "dependencies": {
-    "@comunica/config-query-sparql": "~5.0.0"
+    "@comunica/utils-algebra": "^5.3.0"
   }
 }

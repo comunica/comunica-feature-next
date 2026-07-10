@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 declare const Comunica: any;
 
-const browserBundlePath = 'engines/query-sparql/comunica-browser.js';
+const browserBundlePath = 'engines/query-sparql-next/comunica-browser.js';
 
 test.describe('System test: QuerySparql', () => {
   test.beforeEach(async({ page }) => {
@@ -34,6 +34,20 @@ test.describe('System test: QuerySparql', () => {
     'query simple SPO on a raw RDF document should return the valid result with a turtle data source',
     async({ page }) => {
       const query = 'CONSTRUCT WHERE { ?s ?p ?o }';
+      const expectedResult = [
+        {
+          graph: { termType: 'DefaultGraph', value: '' },
+          object: { termType: 'NamedNode', value: 'http://example.org/o' },
+          predicate: { termType: 'NamedNode', value: 'http://example.org/p' },
+          subject: { termType: 'NamedNode', value: 'http://example.org/s' },
+        },
+        {
+          graph: { termType: 'DefaultGraph', value: '' },
+          object: { termType: 'NamedNode', value: 'http://example.org/o2' },
+          predicate: { termType: 'NamedNode', value: 'http://example.org/p2' },
+          subject: { termType: 'NamedNode', value: 'http://example.org/s' },
+        },
+      ];
 
       const turtleValue = '<http://example.org/s> <http://example.org/p> <http://example.org/o>. <http://example.org/s> <http://example.org/p2> <http://example.org/o2>.';
       const context = { sources: [

@@ -1,6 +1,7 @@
 {
   "extends": "./tsconfig.json",
   "include": [
+    "jest.setup.ts",
     "engines/**/*.ts",
     "jest.config.ts",
     "packages/**/*.ts",
