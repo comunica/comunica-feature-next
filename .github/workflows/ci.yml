@@ -72,7 +72,7 @@ jobs:
         run: yarn run build
       - name: Run tests
         run: yarn run test-ci
-      #        Needed until https://github.com/coverallsapp/github-action/pull/265
+      # TODO: Needed until https://github.com/coverallsapp/github-action/pull/265
       - name: Trust Coveralls Homebrew tap (Homebrew 6 requirement)
         if: runner.os == 'macOS'
         run: brew trust coverallsapp/coveralls
