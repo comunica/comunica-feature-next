@@ -10,9 +10,5 @@ export type Query =
   | QueryConstruct;
 
 export type QueryConstruct = Patch<T12.QueryConstruct, {
-  template: (PatternRestrictedGraph | T12.PatternBgp)[];
-}>;
-
-export type PatternRestrictedGraph = Patch<T12.PatternGraph, {
-  patterns: (PatternRestrictedGraph | T12.PatternBgp)[];
+  template: T12.Quads[];
 }>;
