@@ -1,0 +1,18 @@
+import type { Patch } from '@traqula/core';
+import type * as T12 from '@traqula/rules-sparql-1-2';
+
+export type SparqlNextNodes =
+  | Exclude<T12.Sparql12Nodes, T12.Query>
+  | Query;
+
+export type Query =
+  | Exclude<T12.Query, T12.QueryConstruct>
+  | QueryConstruct;
+
+export type QueryConstruct = Patch<T12.QueryConstruct, {
+  template: (PatternRestrictedGraph | T12.PatternBgp)[];
+}>;
+
+export type PatternRestrictedGraph = Patch<T12.PatternGraph, {
+  patterns: (PatternRestrictedGraph | T12.PatternBgp)[];
+}>;

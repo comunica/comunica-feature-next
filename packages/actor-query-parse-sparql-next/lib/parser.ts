@@ -1,12 +1,14 @@
 import type { ParserBuildArgs, ImplArgs } from '@traqula/core';
 import { ParserBuilder } from '@traqula/core';
 import { sparql12ParserBuilder } from '@traqula/parser-sparql-1-2';
-import { gram as gram11 } from '@traqula/rules-sparql-1-1';
+import { gram as gram11, lex as l } from '@traqula/rules-sparql-1-1';
 import { gram as gramAdj } from '@traqula/rules-sparql-1-1-adjust';
 import type * as T12 from '@traqula/rules-sparql-1-2';
+import type { PatternBgp } from '@traqula/rules-sparql-1-2';
 import { gram as gram12, completeParseContext, copyParseContext } from '@traqula/rules-sparql-1-2';
-import { constructTemplateGraphPatch } from './constructTemplateGraph';
+import type { PatternRestrictedGraph } from './astTypes';
 import { sparqlNextLexerBuilder } from './lexer';
+import type { SparqlGrammarRule12 } from './types';
 
 /**
  * Patch builtInCall to add ADJUST support alongside all SPARQL 1.1 and 1.2 built-ins.
@@ -20,6 +22,75 @@ const builtInPatch = {
     { ALT: () => gram12.builtInCall.impl($)(c) },
     { ALT: () => $.SUBRULE(gramAdj.builtInAdjust) },
   ]),
+};
+
+const exportTemplate12 = sparql12ParserBuilder.getRule('constructTemplate');
+const constructTriples12 = sparql12ParserBuilder.getRule('constructTriples');
+const triplesTemplate12 = sparql12ParserBuilder.getRule('triplesTemplate');
+const varOrIri = sparql12ParserBuilder.getRule('varOrIri');
+const triplesBlock = sparql12ParserBuilder.getRule('triplesBlock');
+/**
+ * Similar to
+ * [GraphGraphTemplate](https://www.w3.org/TR/sparql12-query/#rGraphGraphPattern)
+ * {@link gram11.graphGraphPattern} but contained can only be triplesTemplate or graphGraphTemplate.
+ */
+export const graphGraphTemplate: SparqlGrammarRule12<'graphGraphTemplate', PatternRestrictedGraph> = <const> {
+  name: 'graphGraphTemplate',
+  impl: ({ ACTION, SUBRULE, SUBRULE1, SUBRULE2, CONSUME, MANY, OPTION1, OPTION2, OPTION3 }) => (C) => {
+    const patterns: (PatternRestrictedGraph | T12.PatternBgp)[] = [];
+
+    const graph = CONSUME(l.graph.graph);
+    const name = SUBRULE(varOrIri);
+
+    CONSUME(l.symbols.LCurly);
+    const bgpPattern = OPTION1(() => SUBRULE1(triplesBlock));
+    if (bgpPattern) {
+      patterns.push(bgpPattern);
+    }
+    MANY(() => {
+      const notTriples = SUBRULE(graphGraphTemplate);
+      patterns.push(notTriples);
+
+      OPTION2(() => CONSUME(l.symbols.dot));
+
+      const moreTriples = OPTION3(() => SUBRULE2(triplesBlock));
+      if (moreTriples) {
+        patterns.push(moreTriples);
+      }
+    });
+    const close = CONSUME(l.symbols.RCurly);
+
+    return ACTION(() => ({
+      type: 'pattern',
+      subType: 'graph',
+      name,
+      patterns,
+      loc: C.astFactory.sourceLocation(graph, close),
+    } satisfies PatternRestrictedGraph));
+  },
+};
+
+// ConstructTremplate -> constructTriples (was = triplesTemnplate)
+
+// ConstructTriples == triplesTemplate
+export const constructTriples:
+SparqlGrammarRule12<typeof constructTriples12['name'], PatternBgp | PatternRestrictedGraph> = <const> {
+  name: 'constructTriples',
+  impl: triplesTemplate.impl,
+};
+export const constructTemplate:
+SparqlGrammarRule12<typeof exportTemplate12['name'], T12.BasicGraphPattern | PatternRestrictedGraph> = {
+  name: gram11.constructTemplate.name,
+  impl: ({ ACTION, SUBRULE1, CONSUME, OPTION }) => (C) => {
+    const open = CONSUME(l.symbols.LCurly);
+    const triples = OPTION(() => SUBRULE1(constructTriples));
+    const close = CONSUME(l.symbols.RCurly);
+
+    return ACTION(() => C.astFactory.wrap(
+      triples ?? C.astFactory.patternBgp([], C.astFactory.sourceLocation()),
+      C.astFactory.sourceLocation(open, close),
+    ));
+  },
 };
 
 export const sparqlNextParserBuilder = ParserBuilder
