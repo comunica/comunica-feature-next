@@ -5,7 +5,7 @@ import { gram as gram11, lex as l } from '@traqula/rules-sparql-1-1';
 import { gram as gramAdj } from '@traqula/rules-sparql-1-1-adjust';
 import type * as T12 from '@traqula/rules-sparql-1-2';
 import { gram as gram12, completeParseContext, copyParseContext } from '@traqula/rules-sparql-1-2';
-import type { QueryConstruct } from './astTypes';
+import type { Query, QueryConstruct, SparqlQuery } from './astTypes';
 import { sparqlNextLexerBuilder } from './lexer';
 import type { SparqlGrammarRule12 } from './types';
 
@@ -103,6 +103,10 @@ SparqlGrammarRule12<typeof constructQuery12['name'], Omit<QueryConstruct, gram11
 
 export const sparqlNextParserBuilder = ParserBuilder
   .create(sparql12ParserBuilder)
+  .typePatch<{
+    queryOrUpdate: [SparqlQuery];
+    query: [Query];
+  }>()
   .patchRule(gram11.prologue)
   .patchRule(gram12.prologue)
   .addRule(gramAdj.builtInAdjust)
@@ -137,7 +141,7 @@ export class SparqlNextParser {
    * @param query
    * @param context
    */
-  public parse(query: string, context: Partial<T12.SparqlContext> = {}): T12.SparqlQuery {
+  public parse(query: string, context: Partial<T12.SparqlContext> = {}): SparqlQuery {
     const ast = this.parser.queryOrUpdate(query, copyParseContext({ ...this.defaultContext, ...context }));
     ast.loc = this.defaultContext.astFactory.sourceLocationInlinedSource(query, ast.loc, 0, Number.MAX_SAFE_INTEGER);
     return ast;

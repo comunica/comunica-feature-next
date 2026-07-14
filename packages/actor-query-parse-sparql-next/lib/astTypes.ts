@@ -5,6 +5,8 @@ export type SparqlNextNodes =
   | Exclude<T12.Sparql12Nodes, T12.Query>
   | Query;
 
+export type SparqlQuery = Query | T12.Update;
+
 export type Query =
   | Exclude<T12.Query, T12.QueryConstruct>
   | QueryConstruct;
