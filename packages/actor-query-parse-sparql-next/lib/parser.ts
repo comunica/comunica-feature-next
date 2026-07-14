@@ -74,7 +74,7 @@ SparqlGrammarRule12<typeof constructQuery12['name'], Omit<QueryConstruct, gram11
           subType: 'construct',
           template: template.val,
           datasets: from,
-          where: C.astFactory.patternGroup(template.val.map((x) => {
+          where: C.astFactory.patternGroup(<Parameters<typeof C.astFactory.patternGroup>[0]> template.val.map((x) => {
             if (x.type === 'pattern') {
               return x;
             }
