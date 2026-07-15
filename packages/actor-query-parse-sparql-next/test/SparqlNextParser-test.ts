@@ -191,5 +191,44 @@ describe('a SPARQL 1.2 parser', () => {
       expect(template).toHaveLength(1);
       expect(template[0].graph.termType).toBe('DefaultGraph');
     });
+
+    it('supports the CONSTRUCT WHERE shorthand without a GRAPH block', () => {
+      const query = 'CONSTRUCT WHERE { ?s ?p ?o }';
+      const parsed = parser.parse(query, graphContext);
+      const algebra = <any> toAlgebra(parsed, { prefixes: graphContext.prefixes });
+      const template = algebra.template;
+      expect(template).toHaveLength(1);
+      expect(template[0].graph.termType).toBe('DefaultGraph');
+    });
+
+    it('supports a GRAPH block inside the CONSTRUCT WHERE shorthand', () => {
+      const query = 'CONSTRUCT WHERE { GRAPH ?g { ?s ?p ?o } }';
+      const parsed = <any> parser.parse(query, graphContext);
+      expect(parsed.template).toHaveLength(1);
+      expect(parsed.template[0].type).toBe('graph');
+      expect(parsed.template[0].graph.value).toBe('g');
+
+      const algebra = <any> toAlgebra(parsed, { prefixes: graphContext.prefixes });
+      const template = algebra.template;
+      expect(template).toHaveLength(1);
+      expect(template[0].graph.termType).toBe('Variable');
+      expect(template[0].graph.value).toBe('g');
+    });
+
+    it('supports mixing plain triples and a GRAPH block in the CONSTRUCT WHERE shorthand', () => {
+      const query = 'CONSTRUCT WHERE { ?s ?p ?o . GRAPH ?g { ?a ?b ?c } }';
+      const parsed = <any> parser.parse(query, graphContext);
+      expect(parsed.template).toHaveLength(2);
+      expect(parsed.template[0].type).toBe('pattern');
+      expect(parsed.template[1].type).toBe('graph');
+
+      const algebra = <any> toAlgebra(parsed, { prefixes: graphContext.prefixes });
+      const template = algebra.template;
+      expect(template).toHaveLength(2);
+      const [ defaultQuad, graphQuad ] = template;
+      expect(defaultQuad.graph.termType).toBe('DefaultGraph');
+      expect(graphQuad.graph.termType).toBe('Variable');
+      expect(graphQuad.graph.value).toBe('g');
+    });
   });
 });
