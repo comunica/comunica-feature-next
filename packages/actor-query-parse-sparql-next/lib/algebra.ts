@@ -1,13 +1,19 @@
 import { toAlgebra12Builder } from '@traqula/algebra-sparql-1-2';
-import { translateAggregates, translateBasicGraphPattern, translateTerm } from '@traqula/algebra-transformations-1-1';
-import type { Algebra, ContextConfigs } from '@traqula/algebra-transformations-1-2';
+import type {
+  Algebra,
+  AlgebraIndir,
+  ContextConfigs,
+  FlattenedTriple,
+} from '@traqula/algebra-transformations-1-2';
 import { createAlgebraContext } from '@traqula/algebra-transformations-1-2';
+import type { Patch } from '@traqula/core';
 import { IndirBuilder } from '@traqula/core';
 import type * as T12 from '@traqula/rules-sparql-1-2';
-import type { QueryConstruct, SparqlQuery } from './astTypes';
+import type { Query, SparqlQuery } from './astTypes';
 
 export { toAst } from '@traqula/algebra-sparql-1-2';
 
+const translateBasicGraphPattern = toAlgebra12Builder.getRule('translateBasicGraphPattern');
 /**
  * Patched `translateBasicGraphPattern` that understands `GRAPH` blocks
  * ({@link T12.GraphQuads}) inside a CONSTRUCT template.
@@ -17,27 +23,29 @@ export { toAst } from '@traqula/algebra-sparql-1-2';
  * quad. The regular `translateQuad` step then places these quads (with their
  * graph) into the CONSTRUCT algebra template.
  */
-const translateBasicGraphPatternWithGraph = <typeof translateBasicGraphPattern> {
+const translateBasicGraphPatternWithGraph: AlgebraIndir<
+  typeof translateBasicGraphPattern['name'],
+void,
+[(T12.GraphQuads | T12.BasicGraphPattern[0])[], FlattenedTriple[]]
+> = <const> {
   name: translateBasicGraphPattern.name,
-  fun: (impl: Parameters<typeof translateBasicGraphPattern.fun>[0]) =>
-    (c: Parameters<ReturnType<typeof translateBasicGraphPattern.fun>>[0], triples: any[], result: any[]): void => {
-      const { SUBRULE } = impl;
-      const F = c.astFactory;
-      for (const triple of triples) {
-        if (F.isGraphQuads(triple)) {
-          const graph = SUBRULE(translateTerm, triple.graph);
-          const inner: any[] = [];
-          SUBRULE(translateBasicGraphPattern, triple.triples.triples, inner);
-          for (const quad of inner) {
-            result.push(Object.assign(quad, { graph }));
-          }
-        } else {
-          // Delegate regular triples/collections to the original implementation.
-          translateBasicGraphPattern.fun(impl)(c, [ triple ], result);
-        }
+  fun: $ => (c, triples, result): void => {
+    for (const triple of triples) {
+      if (triple.type === 'graph') {
+        const graph = $.SUBRULE(translateTerm, triple.graph);
+        const inner: FlattenedTriple[] = [];
+        $.SUBRULE(translateBasicGraphPatternWithGraph, triple.triples.triples, inner);
+        result.push(...inner.map(x => Object.assign(x, { graph })));
+      } else {
+        // Delegate regular triples/collections to the original implementation.
+        translateBasicGraphPattern.fun($)(c, [ triple ], result);
       }
-    },
+    }
+  },
 };
+
+const translateAggregates = toAlgebra12Builder.getRule('translateAggregates');
+const translateTerm = toAlgebra12Builder.getRule('translateTerm');
 
 /**
  * Patched `translateAggregates` that understands a CONSTRUCT template shaped as a
@@ -51,31 +59,32 @@ const translateBasicGraphPatternWithGraph = <typeof translateBasicGraphPattern> 
  * subsequently interpreted by {@link translateBasicGraphPatternWithGraph}) and
  * then delegates to the original implementation for all remaining work.
  */
-const translateAggregatesQuadTemplate = <typeof translateAggregates> {
+const translateAggregatesQuadTemplate:
+AlgebraIndir<typeof translateAggregates['name'], Algebra.Operation, [Query, Algebra.Operation]> = <const> {
   name: translateAggregates.name,
-  fun: (impl: Parameters<typeof translateAggregates.fun>[0]) =>
-    (
-      c: Parameters<ReturnType<typeof translateAggregates.fun>>[0],
-      query: Parameters<ReturnType<typeof translateAggregates.fun>>[1],
-      res: Parameters<ReturnType<typeof translateAggregates.fun>>[2],
-    ): ReturnType<ReturnType<typeof translateAggregates.fun>> => {
-      const F = c.astFactory;
-      if (F.isQueryConstruct(query)) {
-        const template = (<QueryConstruct> <unknown> query).template;
-        // Flatten `Quads[]` into a single `PatternBgp`, keeping `GRAPH` blocks inline
-        // for `translateBasicGraphPatternWithGraph` to interpret.
-        const triples: any[] = [];
-        for (const quad of <any[]> template) {
-          if (F.isGraphQuads(quad)) {
-            triples.push(quad);
-          } else {
-            triples.push(...quad.triples);
-          }
+  fun: $ => (c, query, res) => {
+    const { astFactory: F } = c;
+    if (query.subType === 'construct') {
+      const template = query.template;
+      // Flatten `Quads[]` into a single `PatternBgp`, keeping `GRAPH` blocks inline
+      // for `translateBasicGraphPatternWithGraph` to interpret.
+      const triples: (T12.GraphQuads | T12.BasicGraphPattern[0])[] = [];
+      for (const quad of template) {
+        if (quad.type === 'graph') {
+          triples.push(quad);
+        } else {
+          triples.push(...quad.triples);
         }
-        query = <typeof query> <unknown> { ...query, template: F.patternBgp(triples, F.gen()) };
       }
-      return translateAggregates.fun(impl)(c, query, res);
-    },
+      query = <Query> <unknown> ({
+        ...query,
+        template: { type: 'pattern', subType: 'bgp', triples, loc: F.sourceLocation() },
+      } satisfies Patch<Query, {
+        template: Patch<T12.PatternBgp, { triples: (T12.PatternBgp['triples'][0] | T12.GraphQuads)[] }>;
+      }>);
+    }
+    return translateAggregates.fun($)(c, <T12.Query> query, res);
+  },
 };
 
 const toAlgebraBuilder = IndirBuilder
