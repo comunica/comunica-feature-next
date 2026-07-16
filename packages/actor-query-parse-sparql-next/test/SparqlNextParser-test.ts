@@ -1,10 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { BaseQuad } from '@rdfjs/types';
+import type { Algebra } from '@traqula/algebra-transformations-1-2';
 import { AstFactory, lex as l12 } from '@traqula/rules-sparql-1-2';
 import { positiveTest, importSparql11NoteTests, negativeTest, getStaticFilePath } from '@traqula/test-utils';
 import { DataFactory } from 'rdf-data-factory';
 import { SparqlNextParser, sparqlNextParserBuilder, toAlgebra, toAst } from '../lib';
+import type { QueryConstruct } from '../lib/astTypes';
 
 describe('a SPARQL 1.2 parser', () => {
   const astFactory = new AstFactory({ tracksSourceLocation: false });
@@ -35,7 +37,7 @@ describe('a SPARQL 1.2 parser', () => {
    * fixtures still encode the old shape, so those CONSTRUCT cases are skipped
    * here until the fixtures are regenerated for the new template representation.
    */
-  function usesLegacyConstructTemplate(suite: string, name: string): boolean {
+  function usesSparql12ConstructTemplateAst(suite: string, name: string): boolean {
     const query = fs.readFileSync(getStaticFilePath('ast', 'sparql', suite, `${name}.sparql`), 'utf8');
     return /\bconstruct\b/iu.test(query);
   }
@@ -54,7 +56,7 @@ describe('a SPARQL 1.2 parser', () => {
   });
 
   describe('positive sparql 1.1', () => {
-    const tests = [ ...positiveTest('sparql-1-1', name => !usesLegacyConstructTemplate('sparql-1-1', name)) ];
+    const tests = [ ...positiveTest('sparql-1-1', name => !usesSparql12ConstructTemplateAst('sparql-1-1', name)) ];
     it.each(tests)('can parse $name', async({ statics }) => {
       const { query, astWithSource } = await statics();
       const astNoSource = astFactory.forcedAutoGenTree(<object> astWithSource);
@@ -76,7 +78,7 @@ describe('a SPARQL 1.2 parser', () => {
   });
 
   describe('positive sparql 1.2', () => {
-    const tests = [ ...positiveTest('sparql-1-2', name => !usesLegacyConstructTemplate('sparql-1-2', name)) ];
+    const tests = [ ...positiveTest('sparql-1-2', name => !usesSparql12ConstructTemplateAst('sparql-1-2', name)) ];
     it.each(tests)('can parse $name', async({ statics }) => {
       const { query, astWithSource } = await statics();
       const astNoSource = astFactory.forcedAutoGenTree(<object> astWithSource);
@@ -128,107 +130,123 @@ describe('a SPARQL 1.2 parser', () => {
 
     it('parses a GRAPH block inside the CONSTRUCT template', () => {
       const query = 'CONSTRUCT { ?s ?p ?o . GRAPH ?g { ?a ?b ?c } } WHERE { ?s ?p ?o }';
-      const parsed = <any> parser.parse(query, graphContext);
-      const template = parsed.template;
-      expect(template).toHaveLength(2);
-      expect(template[0].subType).toBe('bgp');
-      expect(template[1].type).toBe('graph');
-      expect(template[1].graph.value).toBe('g');
+      const parsed = parser.parse(query, graphContext);
+      expect(parsed).toMatchObject({
+        template: [
+          { subType: 'bgp' },
+          { type: 'graph', graph: { value: 'g' }},
+        ],
+      });
     });
 
     it('assigns the graph of a named GRAPH block to the CONSTRUCT quads', () => {
       const query =
         'CONSTRUCT { GRAPH <http://example.org/g> { ?a ?b ?c } } WHERE { ?s ?p ?o }';
       const parsed = parser.parse(query, graphContext);
-      const algebra = <any> toAlgebra(parsed, { prefixes: graphContext.prefixes });
-      const template = algebra.template;
-      expect(template).toHaveLength(1);
-      expect(template[0].graph.termType).toBe('NamedNode');
-      expect(template[0].graph.value).toBe('http://example.org/g');
+      const algebra = <Algebra.Construct> toAlgebra(parsed, { prefixes: graphContext.prefixes });
+      expect(algebra).toMatchObject({
+        template: [
+          { graph: { termType: 'NamedNode', value: 'http://example.org/g' }},
+        ],
+      });
     });
 
     it('assigns the graph of a variable GRAPH block to the CONSTRUCT quads', () => {
       const query = 'CONSTRUCT { GRAPH ?g { ?a ?b ?c } } WHERE { ?s ?p ?o }';
       const parsed = parser.parse(query, graphContext);
-      const algebra = <any> toAlgebra(parsed, { prefixes: graphContext.prefixes });
-      const template = algebra.template;
-      expect(template).toHaveLength(1);
-      expect(template[0].graph.termType).toBe('Variable');
-      expect(template[0].graph.value).toBe('g');
+      const algebra = <Algebra.Construct> toAlgebra(parsed, { prefixes: graphContext.prefixes });
+      expect(algebra).toMatchObject({
+        template: [
+          { graph: { termType: 'Variable', value: 'g' }},
+        ],
+      });
     });
 
     it('keeps triples outside GRAPH blocks in the default graph', () => {
       const query =
         'CONSTRUCT { ?s ?p ?o . GRAPH ?g { ?a ?b ?c } } WHERE { ?s ?p ?o }';
       const parsed = parser.parse(query, graphContext);
-      const algebra = <any> toAlgebra(parsed, { prefixes: graphContext.prefixes });
-      const template = algebra.template;
-      expect(template).toHaveLength(2);
-      const [ defaultQuad, graphQuad ] = template;
-      expect(defaultQuad.graph.termType).toBe('DefaultGraph');
-      expect(graphQuad.graph.termType).toBe('Variable');
-      expect(graphQuad.graph.value).toBe('g');
+      const algebra = <Algebra.Construct> toAlgebra(parsed, { prefixes: graphContext.prefixes });
+      expect(algebra).toMatchObject({
+        template: [
+          { graph: { termType: 'DefaultGraph' }},
+          { graph: { termType: 'Variable', value: 'g' }},
+        ],
+      });
     });
 
     it('applies the graph to every quad expanded from a collection', () => {
       const query =
         'CONSTRUCT { GRAPH ?g { ?s ex:p ( ex:a ex:b ) } } WHERE { ?s ?p ?o }';
       const parsed = parser.parse(query, graphContext);
-      const algebra = <any> toAlgebra(parsed, { prefixes: graphContext.prefixes });
-      const template = algebra.template;
-      expect(template.length).toBeGreaterThan(1);
-      for (const quad of template) {
-        expect(quad.graph.termType).toBe('Variable');
-        expect(quad.graph.value).toBe('g');
-      }
+      const algebra = <Algebra.Construct> toAlgebra(parsed, { prefixes: graphContext.prefixes });
+      expect(algebra).toMatchObject({
+        template: [
+          { graph: { termType: 'Variable', value: 'g' }},
+          { graph: { termType: 'Variable', value: 'g' }},
+          { graph: { termType: 'Variable', value: 'g' }},
+          { graph: { termType: 'Variable', value: 'g' }},
+          { graph: { termType: 'Variable', value: 'g' }},
+        ],
+      });
     });
 
     it('still produces default-graph quads when no GRAPH block is used', () => {
       const query = 'CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }';
       const parsed = parser.parse(query, graphContext);
-      const algebra = <any> toAlgebra(parsed, { prefixes: graphContext.prefixes });
-      const template = algebra.template;
-      expect(template).toHaveLength(1);
-      expect(template[0].graph.termType).toBe('DefaultGraph');
+      const algebra = <Algebra.Construct> toAlgebra(parsed, { prefixes: graphContext.prefixes });
+      expect(algebra).toMatchObject({
+        template: [
+          { graph: { termType: 'DefaultGraph' }},
+        ],
+      });
     });
 
     it('supports the CONSTRUCT WHERE shorthand without a GRAPH block', () => {
       const query = 'CONSTRUCT WHERE { ?s ?p ?o }';
       const parsed = parser.parse(query, graphContext);
-      const algebra = <any> toAlgebra(parsed, { prefixes: graphContext.prefixes });
-      const template = algebra.template;
-      expect(template).toHaveLength(1);
-      expect(template[0].graph.termType).toBe('DefaultGraph');
+      const algebra = <Algebra.Construct> toAlgebra(parsed, { prefixes: graphContext.prefixes });
+      expect(algebra).toMatchObject({
+        template: [
+          { graph: { termType: 'DefaultGraph' }},
+        ],
+      });
     });
 
     it('supports a GRAPH block inside the CONSTRUCT WHERE shorthand', () => {
       const query = 'CONSTRUCT WHERE { GRAPH ?g { ?s ?p ?o } }';
-      const parsed = <any> parser.parse(query, graphContext);
-      expect(parsed.template).toHaveLength(1);
-      expect(parsed.template[0].type).toBe('graph');
-      expect(parsed.template[0].graph.value).toBe('g');
+      const parsed = <QueryConstruct> parser.parse(query, graphContext);
+      expect(parsed).toMatchObject({
+        template: [
+          { type: 'graph', graph: { value: 'g' }},
+        ],
+      });
 
-      const algebra = <any> toAlgebra(parsed, { prefixes: graphContext.prefixes });
-      const template = algebra.template;
-      expect(template).toHaveLength(1);
-      expect(template[0].graph.termType).toBe('Variable');
-      expect(template[0].graph.value).toBe('g');
+      const algebra = <Algebra.Construct> toAlgebra(parsed, { prefixes: graphContext.prefixes });
+      expect(algebra).toMatchObject({
+        template: [
+          { graph: { termType: 'Variable', value: 'g' }},
+        ],
+      });
     });
 
     it('supports mixing plain triples and a GRAPH block in the CONSTRUCT WHERE shorthand', () => {
       const query = 'CONSTRUCT WHERE { ?s ?p ?o . GRAPH ?g { ?a ?b ?c } }';
-      const parsed = <any> parser.parse(query, graphContext);
-      expect(parsed.template).toHaveLength(2);
-      expect(parsed.template[0].type).toBe('pattern');
-      expect(parsed.template[1].type).toBe('graph');
+      const parsed = <QueryConstruct> parser.parse(query, graphContext);
+      expect(parsed).toMatchObject({
+        template: [
+          { type: 'pattern' },
+          { type: 'graph' },
+        ],
+      });
 
-      const algebra = <any> toAlgebra(parsed, { prefixes: graphContext.prefixes });
-      const template = algebra.template;
-      expect(template).toHaveLength(2);
-      const [ defaultQuad, graphQuad ] = template;
-      expect(defaultQuad.graph.termType).toBe('DefaultGraph');
-      expect(graphQuad.graph.termType).toBe('Variable');
-      expect(graphQuad.graph.value).toBe('g');
+      const algebra = <Algebra.Construct> toAlgebra(parsed, { prefixes: graphContext.prefixes });
+      expect(algebra).toMatchObject({
+        template: [
+          { graph: { termType: 'DefaultGraph' }},
+          { graph: { termType: 'Variable', value: 'g' }},
+        ],
+      });
     });
   });
 });
