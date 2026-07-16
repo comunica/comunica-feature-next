@@ -1,5 +1,5 @@
 import type { ParserBuildArgs, ImplArgs } from '@traqula/core';
-import { ParserBuilder } from '@traqula/core';
+import { GeneratorBuilder, ParserBuilder } from '@traqula/core';
 import { sparql12ParserBuilder } from '@traqula/parser-sparql-1-2';
 import { gram as gram11, lex as l } from '@traqula/rules-sparql-1-1';
 import { gram as gramAdj } from '@traqula/rules-sparql-1-1-adjust';
@@ -101,6 +101,51 @@ SparqlGrammarRule12<typeof constructQuery12['name'], Omit<QueryConstruct, gram11
   },
 };
 
+const origGraphPatternNotTriplesParserRule = sparql12ParserBuilder
+  .getRule('graphPatternNotTriples');
+const origGraphPatternNotTriplesGeneratorRule = sparql12GeneratorBuilder
+  .getRule('graphPatternNotTriples');
+const origGroupGraphPatternParserRule = sparql12ParserBuilder
+  .getRule('groupGraphPattern');
+const origGroupGraphPatternGeneratorRule = sparql12GeneratorBuilder
+  .getRule('groupGraphPattern');
+
+export const graphPatternNotTriples: T11.SparqlRule<
+  typeof origGraphPatternNotTriplesParserRule['name'],
+  RuleDefReturn<typeof origGraphPatternNotTriplesParserRule> | PatternLateral
+> = {
+  name: 'graphPatternNotTriples',
+  impl: $ => C => $.OR2<RuleDefReturn<typeof graphPatternNotTriples>>([
+    { ALT: () => $.SUBRULE(lateralGraphPattern) },
+    { ALT: () => origGraphPatternNotTriplesParserRule.impl($)(C) },
+  ]),
+  gImpl: $ => (ast, C) => {
+    if (ast.subType === 'lateral') {
+      $.SUBRULE(lateralGraphPattern, ast);
+    } else {
+      origGraphPatternNotTriplesGeneratorRule.gImpl($)(ast, C);
+    }
+  },
+};
+
+export const lateralGraphPattern: T11.SparqlRule<'lateralGraphPattern', PatternLateral> = {
+  name: 'lateralGraphPattern',
+  impl: ({ CONSUME, SUBRULE, ACTION }) => (C) => {
+    const token = CONSUME(lateral);
+    const group = SUBRULE(origGroupGraphPatternParserRule);
+    return ACTION(() => ({
+      type: 'pattern',
+      subType: 'lateral',
+      patterns: group.patterns,
+      loc: C.astFactory.sourceLocation(token, group),
+    } satisfies PatternLateral));
+  },
+  gImpl: ({ SUBRULE, PRINT_WORD }) => (ast, { astFactory: F }) => {
+    F.printFilter(ast, () => PRINT_WORD('LATERAL'));
+    SUBRULE(origGroupGraphPatternGeneratorRule, F.patternGroup(<T11.Pattern[]> ast.patterns, ast.loc));
+  },
+};
+
 export const sparqlNextParserBuilder = ParserBuilder
   .create(sparql12ParserBuilder)
   .typePatch<{
@@ -113,7 +158,9 @@ export const sparqlNextParserBuilder = ParserBuilder
   .patchRule(builtInPatch)
   .deleteRule('constructTriples')
   .deleteRule('constructTemplate')
-  .patchRule(constructQuery);
+  .patchRule(constructQuery)
+  .addRule(lateralGraphPattern)
+  .patchRule(graphPatternNotTriples);
 
 export type FullSparqlNextParser = ReturnType<typeof sparqlNextParserBuilder.build>;
 
@@ -147,3 +194,7 @@ export class SparqlNextParser {
     return ast;
   }
 }
+
+export const lateralGeneratorBuilder = GeneratorBuilder.create(sparql12GeneratorBuilder)
+  .addRule(lateralGraphPattern)
+  .patchRule(graphPatternNotTriples);
