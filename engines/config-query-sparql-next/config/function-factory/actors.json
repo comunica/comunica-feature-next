@@ -1,0 +1,18 @@
+{
+  "@context": [
+    "https://linkedsoftwaredependencies.org/bundles/npm/@comunica/config-query-sparql/^5.0.0/components/context.jsonld",
+    "https://linkedsoftwaredependencies.org/bundles/npm/@comunica/runner/^5.0.0/components/context.jsonld",
+    "https://linkedsoftwaredependencies.org/bundles/npm/@comunica/actor-function-factory-term-adjust/^0.0.0/components/context.jsonld"
+  ],
+  "import": [
+    "ccqs:config/function-factory/actors.json"
+  ],
+  "@id": "urn:comunica:default:Runner",
+  "@type": "Runner",
+  "actors": [
+    {
+      "@id": "urn:comunica:default:function-factory/actors#term-function-adjust",
+      "@type": "ActorFunctionFactoryTermAdjust"
+    }
+  ]
+}

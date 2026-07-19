@@ -1,6 +1,7 @@
 import { TermFunctionBase } from '@comunica/bus-function-factory';
 import type {
   DayTimeDurationLiteral,
+  StringLiteral,
 } from '@comunica/utils-expression-evaluator';
 import {
   defaultedDateTimeRepresentation,
@@ -8,6 +9,7 @@ import {
   addDurationToDateTime,
   DateTimeLiteral,
   declare,
+  InvalidTimezoneCall,
   TypeURL,
   DateLiteral,
   TimeLiteral,
@@ -41,6 +43,17 @@ export function adjustDateTime(
     zoneHours: zone.hours,
     zoneMinutes: zone.minutes,
   });
+}
+
+/**
+ * When the timezone argument is the empty sequence (represented in SPARQL as an empty string),
+ * the result is the given value with its timezone component removed.
+ * A non-empty string is not a valid timezone argument and raises an expression error.
+ */
+function assertEmptyTimezone(timezone: StringLiteral): void {
+  if (timezone.typedValue !== '') {
+    throw new InvalidTimezoneCall(timezone.typedValue);
+  }
 }
 
 /**
@@ -87,6 +100,36 @@ export class TermFunctionAdjust extends TermFunctionBase {
               seconds: tv.seconds,
               zoneHours: tv.zoneHours,
               zoneMinutes: tv.zoneMinutes,
+            });
+          },
+        ).set(
+          [ TypeURL.XSD_DATE_TIME, TypeURL.XSD_STRING ],
+          () => ([ dateLiteral, timezone ]: [DateTimeLiteral, StringLiteral]) => {
+            assertEmptyTimezone(timezone);
+            return new DateTimeLiteral({
+              ...dateLiteral.typedValue,
+              zoneHours: undefined,
+              zoneMinutes: undefined,
+            });
+          },
+        ).set(
+          [ TypeURL.XSD_DATE, TypeURL.XSD_STRING ],
+          () => ([ date, timezone ]: [DateLiteral, StringLiteral]) => {
+            assertEmptyTimezone(timezone);
+            return new DateLiteral({
+              ...date.typedValue,
+              zoneHours: undefined,
+              zoneMinutes: undefined,
+            });
+          },
+        ).set(
+          [ TypeURL.XSD_TIME, TypeURL.XSD_STRING ],
+          () => ([ time, timezone ]: [TimeLiteral, StringLiteral]) => {
+            assertEmptyTimezone(timezone);
+            return new TimeLiteral({
+              ...time.typedValue,
+              zoneHours: undefined,
+              zoneMinutes: undefined,
             });
           },
         ).collect(),

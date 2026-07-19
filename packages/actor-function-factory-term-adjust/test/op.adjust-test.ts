@@ -49,6 +49,37 @@ describe('evaluation of \'ADJUST\'', () => {
   });
 });
 
+// When the timezone argument is the empty sequence (represented in SPARQL as an empty string ""),
+// the result is the given value with its timezone component removed.
+describe('evaluation of \'ADJUST\' with an empty timezone', () => {
+  const parser = new SparqlNextParser({ lexerConfig: { positionTracking: 'full' }});
+  runFuncTestTable({
+    registeredActors: [
+      args => new ActorFunctionFactoryTermAdjust(args),
+    ],
+    arity: 2,
+    notation: Notation.Function,
+    toAlgebraParse: query => toAlgebra(parser.parse(query)),
+    operation: 'ADJUST',
+    testTable: `
+    '${dateTimeTyped('2002-03-07T10:00:00-07:00')}' '""' = '${dateTimeTyped('2002-03-07T10:00:00')}'
+    '${dateTimeTyped('2002-03-07T10:00:00')}' '""' = '${dateTimeTyped('2002-03-07T10:00:00')}'
+
+    '${dateTyped('2002-03-07-07:00')}' '""' = '${dateTyped('2002-03-07')}'
+    '${dateTyped('2002-03-07')}' '""' = '${dateTyped('2002-03-07')}'
+
+    '${timeTyped('10:00:00-07:00')}' '""' = '${timeTyped('10:00:00')}'
+    '${timeTyped('10:00:00')}' '""' = '${timeTyped('10:00:00')}'
+  `,
+    // A non-empty string is not a valid timezone argument and raises an expression error.
+    errorTable: `
+    '${dateTimeTyped('2002-03-07T10:00:00-07:00')}' '"foo"' = ''
+    '${dateTyped('2002-03-07-07:00')}' '"foo"' = ''
+    '${timeTyped('10:00:00-07:00')}' '"foo"' = ''
+  `,
+  });
+});
+
 describe('adjustDateTime with violated ITimeZoneRepresentation invariant', () => {
   it('treats missing zoneMinutes as 0 when zoneHours is defined', () => {
     // DateTimeLiteral can be constructed with zoneHours defined but zoneMinutes omitted,
