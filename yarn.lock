@@ -3325,15 +3325,10 @@
     "@comunica/core" "^5.3.0"
     "@rdfjs/types" "*"
 
-"@comunica/config-query-sparql@^5.0.0":
+"@comunica/config-query-sparql@^5.0.0", "@comunica/config-query-sparql@~5.3.0":
   version "5.3.0"
   resolved "https://registry.yarnpkg.com/@comunica/config-query-sparql/-/config-query-sparql-5.3.0.tgz#4be54d2893a3906ac190a1f6af0f7318d47b75fb"
   integrity sha512-5snTR5p0yjQCIiRrNu6tzNAD1EfahkSNmQUB2AUI04S/lfz97HQ1ycvQroeJ7P08goyBtld2s0AReexUnNhcfw==
-
-"@comunica/config-query-sparql@~5.0.0":
-  version "5.0.0"
-  resolved "https://registry.yarnpkg.com/@comunica/config-query-sparql/-/config-query-sparql-5.0.0.tgz#f076c5eb451891bc441d371eadc854ead2e06434"
-  integrity sha512-vS6Ik0Lbm9InWPrqnLeOFM7M2SKj+KLqGVwmOaX6N/+3TjOdOhGQJRLZCGXkiwYUDg/Jn3Z++9bQIR9/Bhj4GA==
 
 "@comunica/context-entries@^5.0.0", "@comunica/context-entries@^5.3.0":
   version "5.3.0"
