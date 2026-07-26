@@ -45,6 +45,7 @@
     "build:components": "componentsjs-generator"
   },
   "dependencies": {
+    "@comunica/actor-query-operation-lateral": "^0.0.0",
     "@comunica/config-query-sparql": "~5.0.0"
   }
 }

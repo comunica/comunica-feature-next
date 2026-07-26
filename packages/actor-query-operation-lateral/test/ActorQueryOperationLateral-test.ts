@@ -8,7 +8,11 @@ import { getSafeBindings } from '@comunica/utils-query-operation';
 import { ArrayIterator } from 'asynciterator';
 import { DataFactory } from 'rdf-data-factory';
 import type { Lateral } from '../lib/ActorQueryOperationLateral';
-import { ActorQueryOperationLateral, lateralDisableKey } from '../lib/ActorQueryOperationLateral';
+import {
+  ActorQueryOperationLateral,
+  collectCorrelatableVariables,
+  lateralDisableKey,
+} from '../lib/ActorQueryOperationLateral';
 import '@comunica/utils-jest';
 import 'jest-rdf';
 
@@ -301,5 +305,36 @@ describe('ActorQueryOperationLateral', () => {
       state.invalidate();
       expect(outputMetadata.state.valid).toBeFalsy();
     });
+  });
+});
+
+describe('collectCorrelatableVariables', () => {
+  it('collects visible variables while respecting scope and skipping metadata', () => {
+    const operation = {
+      type: 'filter',
+      // Metadata is runtime bookkeeping and must be ignored.
+      metadata: { variables: [{ variable: DF.variable('fromMetadata') }]},
+      // An array with a referenced variable, a primitive and a null (all handled).
+      expression: { type: 'operator', args: [ DF.variable('a'), 'a-literal', null ]},
+      input: {
+        type: 'project',
+        // Only the projected variable is visible...
+        variables: [ DF.variable('p') ],
+        // ...variables below the sub-SELECT projection are hidden and must NOT be collected.
+        input: {
+          type: 'bgp',
+          patterns: [{ subject: DF.variable('hidden'), predicate: DF.namedNode('x'), object: DF.variable('hidden2') }],
+        },
+      },
+    };
+    const variables = new Set<string>();
+    collectCorrelatableVariables(operation, variables);
+    expect([ ...variables ].sort()).toEqual([ 'a', 'p' ]);
+  });
+
+  it('handles a projection without explicit variables', () => {
+    const variables = new Set<string>();
+    collectCorrelatableVariables({ type: 'project' }, variables);
+    expect([ ...variables ]).toEqual([]);
   });
 });
