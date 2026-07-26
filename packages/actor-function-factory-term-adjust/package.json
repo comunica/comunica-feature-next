@@ -1,7 +1,6 @@
 {
   "name": "@comunica/actor-function-factory-term-adjust",
   "version": "0.0.0",
-  "private": "true",
   "description": "A term-adjust function-factory actor",
   "lsd:module": true,
   "license": "MIT",
