@@ -50,7 +50,7 @@ export function adjustDateTime(
  * the result is the given value with its timezone component removed.
  * A non-empty string is not a valid timezone argument and raises an expression error.
  */
-function assertEmptyTimezone(timezone: StringLiteral): void {
+function assertEmptyTimezone<T extends StringLiteral>(timezone: T): asserts timezone is T & { typedValue: '' } {
   if (timezone.typedValue !== '') {
     throw new InvalidTimezoneCall(timezone.typedValue);
   }
@@ -70,6 +70,16 @@ export class TermFunctionAdjust extends TermFunctionBase {
           [ TypeURL.XSD_DATE_TIME, TypeURL.XSD_DAY_TIME_DURATION ],
           () => adjustDateTime,
         ).set(
+          [ TypeURL.XSD_DATE_TIME, TypeURL.XSD_STRING ],
+          () => ([ dateLiteral, timezone ]: [DateTimeLiteral, StringLiteral]) => {
+            assertEmptyTimezone(timezone);
+            return new DateTimeLiteral({
+              ...dateLiteral.typedValue,
+              zoneHours: undefined,
+              zoneMinutes: undefined,
+            });
+          },
+        ).set(
           [ TypeURL.XSD_DATE, TypeURL.XSD_DAY_TIME_DURATION ],
           () => ([ date, timezone ]: [DateLiteral, DayTimeDurationLiteral]) => {
             const asDateTime = new DateTimeLiteral(defaultedDateTimeRepresentation(date.typedValue));
@@ -81,6 +91,16 @@ export class TermFunctionAdjust extends TermFunctionBase {
               year: tv.year,
               zoneHours: tv.zoneHours,
               zoneMinutes: tv.zoneMinutes,
+            });
+          },
+        ).set(
+          [ TypeURL.XSD_DATE, TypeURL.XSD_STRING ],
+          () => ([ date, timezone ]: [DateLiteral, StringLiteral]) => {
+            assertEmptyTimezone(timezone);
+            return new DateLiteral({
+              ...date.typedValue,
+              zoneHours: undefined,
+              zoneMinutes: undefined,
             });
           },
         ).set(
@@ -100,26 +120,6 @@ export class TermFunctionAdjust extends TermFunctionBase {
               seconds: tv.seconds,
               zoneHours: tv.zoneHours,
               zoneMinutes: tv.zoneMinutes,
-            });
-          },
-        ).set(
-          [ TypeURL.XSD_DATE_TIME, TypeURL.XSD_STRING ],
-          () => ([ dateLiteral, timezone ]: [DateTimeLiteral, StringLiteral]) => {
-            assertEmptyTimezone(timezone);
-            return new DateTimeLiteral({
-              ...dateLiteral.typedValue,
-              zoneHours: undefined,
-              zoneMinutes: undefined,
-            });
-          },
-        ).set(
-          [ TypeURL.XSD_DATE, TypeURL.XSD_STRING ],
-          () => ([ date, timezone ]: [DateLiteral, StringLiteral]) => {
-            assertEmptyTimezone(timezone);
-            return new DateLiteral({
-              ...date.typedValue,
-              zoneHours: undefined,
-              zoneMinutes: undefined,
             });
           },
         ).set(
