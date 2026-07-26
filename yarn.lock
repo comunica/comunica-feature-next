@@ -3114,7 +3114,7 @@
     "@comunica/types" "^5.3.0"
     "@comunica/utils-algebra" "^5.3.0"
 
-"@comunica/bus-query-operation@^5.3.0":
+"@comunica/bus-query-operation@^5.1.3", "@comunica/bus-query-operation@^5.3.0":
   version "5.3.0"
   resolved "https://registry.yarnpkg.com/@comunica/bus-query-operation/-/bus-query-operation-5.3.0.tgz#48193c0a0d9725b9f65914b9585ee7460e6ec6df"
   integrity sha512-acJ87Hsw62NGSCKGbb/YN51zC4d+Tjin3V3DARjnbP7koyltInW8BkNbsZjPr+R5rhvEQbCfxLSuwuk7bg4IIQ==
@@ -3227,7 +3227,7 @@
     "@comunica/utils-metadata" "^5.3.0"
     "@rdfjs/types" "*"
 
-"@comunica/bus-rdf-metadata-accumulate@^5.3.0":
+"@comunica/bus-rdf-metadata-accumulate@^5.1.3", "@comunica/bus-rdf-metadata-accumulate@^5.3.0":
   version "5.3.0"
   resolved "https://registry.yarnpkg.com/@comunica/bus-rdf-metadata-accumulate/-/bus-rdf-metadata-accumulate-5.3.0.tgz#4a23261968fa47b57927a648e14b5edf734a724c"
   integrity sha512-qQFIhWFvqNVT3Lbfe+gF8pWFEyFGhZ4nHRBbSYuhfF53Uq4odEwx/NwFkbrPqH4QWAnKy+uqUCr1RTvNa/0Zyg==
@@ -3335,7 +3335,7 @@
   resolved "https://registry.yarnpkg.com/@comunica/config-query-sparql/-/config-query-sparql-5.0.0.tgz#f076c5eb451891bc441d371eadc854ead2e06434"
   integrity sha512-vS6Ik0Lbm9InWPrqnLeOFM7M2SKj+KLqGVwmOaX6N/+3TjOdOhGQJRLZCGXkiwYUDg/Jn3Z++9bQIR9/Bhj4GA==
 
-"@comunica/context-entries@^5.0.0", "@comunica/context-entries@^5.3.0":
+"@comunica/context-entries@^5.0.0", "@comunica/context-entries@^5.1.3", "@comunica/context-entries@^5.3.0":
   version "5.3.0"
   resolved "https://registry.yarnpkg.com/@comunica/context-entries/-/context-entries-5.3.0.tgz#58e9a930ea6f5f2ea0a09fd8d04302aac2eb93e4"
   integrity sha512-B4KXcYgYDrg1HCl1kCyhHM2I/xvyJsSbf8bxHY2xWnaqqytLJPyyMffKdHFRflHc1JmlqpYV6vyc4+5ZBUWzAw==
@@ -3346,7 +3346,7 @@
     "@rdfjs/types" "*"
     jsonld-context-parser "^2.2.2"
 
-"@comunica/core@^5.0.0", "@comunica/core@^5.3.0":
+"@comunica/core@^5.0.0", "@comunica/core@^5.1.3", "@comunica/core@^5.3.0":
   version "5.3.0"
   resolved "https://registry.yarnpkg.com/@comunica/core/-/core-5.3.0.tgz#06f3022747762ee43a14f8f5de9aaf9734c21e01"
   integrity sha512-f3TIl78jS/Td4b7jcXm8Ps2aTz70yujgrMn2vYKg6YLcvumA7yVJ5yVvgDz+jhv7wnQfk8yJfnzi2PYwuM4UMw==
@@ -3469,7 +3469,7 @@
     componentsjs "^6.2.0"
     process "^0.11.10"
 
-"@comunica/types@^5.3.0":
+"@comunica/types@^5.1.3", "@comunica/types@^5.3.0":
   version "5.3.0"
   resolved "https://registry.yarnpkg.com/@comunica/types/-/types-5.3.0.tgz#07241304424483086a98c5881238f6e93d8b623d"
   integrity sha512-kuEX8uPzCgkVFQRFBrIA7ZYYkiWmQ3BhLlhii9GL3PfbquU0V2QOsebcP21l3rOSNBV63G3IQiWFdhk1Lql2pw==
@@ -3480,7 +3480,7 @@
     asynciterator "^3.10.0"
     lru-cache "^11.2.2"
 
-"@comunica/utils-algebra@^5.3.0":
+"@comunica/utils-algebra@^5.1.3", "@comunica/utils-algebra@^5.3.0":
   version "5.3.0"
   resolved "https://registry.yarnpkg.com/@comunica/utils-algebra/-/utils-algebra-5.3.0.tgz#ba68b75eb903d12bcd432f70ebb6a27184034c23"
   integrity sha512-P/2qjAtuI/wk5RXDkrJuGlgwrRYh+vtl45ZzADs1YEeklzNM4AWT1Fbl501qnwi4MApr6xwPK6OxoQQ+ergB7g==
@@ -3490,7 +3490,7 @@
     "@traqula/core" "^1.1.4"
     rdf-terms "^2.0.0"
 
-"@comunica/utils-bindings-factory@^5.3.0":
+"@comunica/utils-bindings-factory@^5.1.3", "@comunica/utils-bindings-factory@^5.3.0":
   version "5.3.0"
   resolved "https://registry.yarnpkg.com/@comunica/utils-bindings-factory/-/utils-bindings-factory-5.3.0.tgz#bee0a89ab86d71d7fa8b9aeb415e7dcf8f071ff9"
   integrity sha512-CFlQAMKg00a42S/bFKFNUUCyECXPhcqApV/VFcbh4lNWZ0y/9SqQ4Qq/JymH9R3DigshFjEgBCxQ0AIOzBV8Jw==
@@ -3565,7 +3565,7 @@
     rdf-data-factory "^2.0.0"
     rdf-string "^2.0.1"
 
-"@comunica/utils-metadata@^5.3.0":
+"@comunica/utils-metadata@^5.1.3", "@comunica/utils-metadata@^5.3.0":
   version "5.3.0"
   resolved "https://registry.yarnpkg.com/@comunica/utils-metadata/-/utils-metadata-5.3.0.tgz#99c555991ecd423a233405c3904bd593e7c56ef2"
   integrity sha512-4INJurpISwJQ37YjguK2+usOs5nLVbD3/cXiKE2Kc44QKMdX3ykySjmNvZRd3VSfd5G50ML8KtHeCZUR5C8CbQ==
@@ -3585,7 +3585,7 @@
     process "^0.11.10"
     semver "^7.8.5"
 
-"@comunica/utils-query-operation@^5.3.0":
+"@comunica/utils-query-operation@^5.1.3", "@comunica/utils-query-operation@^5.3.0":
   version "5.3.0"
   resolved "https://registry.yarnpkg.com/@comunica/utils-query-operation/-/utils-query-operation-5.3.0.tgz#3162a72de23a6935d34bd1aff8eb411edef4f8f7"
   integrity sha512-gmqfXoo1G7UMKemyOYgp6yF8KEqb/PLiWX2MlRB8+YniswjotGSJ/IBY/24UEW6GnHqNMSQsNQ8LjKa5UxzrGw==
