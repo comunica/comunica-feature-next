@@ -1,6 +1,7 @@
 import { TermFunctionBase } from '@comunica/bus-function-factory';
 import type {
   DayTimeDurationLiteral,
+  StringLiteral,
 } from '@comunica/utils-expression-evaluator';
 import {
   defaultedDateTimeRepresentation,
@@ -8,6 +9,7 @@ import {
   addDurationToDateTime,
   DateTimeLiteral,
   declare,
+  InvalidTimezoneCall,
   TypeURL,
   DateLiteral,
   TimeLiteral,
@@ -44,6 +46,17 @@ export function adjustDateTime(
 }
 
 /**
+ * When the timezone argument is the empty sequence (represented in SPARQL as an empty string),
+ * the result is the given value with its timezone component removed.
+ * A non-empty string is not a valid timezone argument and raises an expression error.
+ */
+function assertEmptyTimezone<T extends StringLiteral>(timezone: T): asserts timezone is T & { typedValue: '' } {
+  if (timezone.typedValue !== '') {
+    throw new InvalidTimezoneCall(timezone.typedValue);
+  }
+}
+
+/**
  * https://github.com/w3c/sparql-dev/blob/main/SEP/SEP-0002/sep-0002.md
  * https://www.w3.org/TR/xpath-functions/#func-adjust-dateTime-to-timezone
  */
@@ -57,6 +70,16 @@ export class TermFunctionAdjust extends TermFunctionBase {
           [ TypeURL.XSD_DATE_TIME, TypeURL.XSD_DAY_TIME_DURATION ],
           () => adjustDateTime,
         ).set(
+          [ TypeURL.XSD_DATE_TIME, TypeURL.XSD_STRING ],
+          () => ([ dateLiteral, timezone ]: [DateTimeLiteral, StringLiteral]) => {
+            assertEmptyTimezone(timezone);
+            return new DateTimeLiteral({
+              ...dateLiteral.typedValue,
+              zoneHours: undefined,
+              zoneMinutes: undefined,
+            });
+          },
+        ).set(
           [ TypeURL.XSD_DATE, TypeURL.XSD_DAY_TIME_DURATION ],
           () => ([ date, timezone ]: [DateLiteral, DayTimeDurationLiteral]) => {
             const asDateTime = new DateTimeLiteral(defaultedDateTimeRepresentation(date.typedValue));
@@ -68,6 +91,16 @@ export class TermFunctionAdjust extends TermFunctionBase {
               year: tv.year,
               zoneHours: tv.zoneHours,
               zoneMinutes: tv.zoneMinutes,
+            });
+          },
+        ).set(
+          [ TypeURL.XSD_DATE, TypeURL.XSD_STRING ],
+          () => ([ date, timezone ]: [DateLiteral, StringLiteral]) => {
+            assertEmptyTimezone(timezone);
+            return new DateLiteral({
+              ...date.typedValue,
+              zoneHours: undefined,
+              zoneMinutes: undefined,
             });
           },
         ).set(
@@ -87,6 +120,16 @@ export class TermFunctionAdjust extends TermFunctionBase {
               seconds: tv.seconds,
               zoneHours: tv.zoneHours,
               zoneMinutes: tv.zoneMinutes,
+            });
+          },
+        ).set(
+          [ TypeURL.XSD_TIME, TypeURL.XSD_STRING ],
+          () => ([ time, timezone ]: [TimeLiteral, StringLiteral]) => {
+            assertEmptyTimezone(timezone);
+            return new TimeLiteral({
+              ...time.typedValue,
+              zoneHours: undefined,
+              zoneMinutes: undefined,
             });
           },
         ).collect(),
