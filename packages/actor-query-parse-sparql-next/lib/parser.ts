@@ -1,12 +1,13 @@
-import type { ParserBuildArgs, ImplArgs } from '@traqula/core';
+import type { ImplArgs, ParserBuildArgs, RuleDefReturn } from '@traqula/core';
 import { GeneratorBuilder, ParserBuilder } from '@traqula/core';
+import { sparql12GeneratorBuilder } from '@traqula/generator-sparql-1-2';
 import { sparql12ParserBuilder } from '@traqula/parser-sparql-1-2';
 import { gram as gram11, lex as l } from '@traqula/rules-sparql-1-1';
 import { gram as gramAdj } from '@traqula/rules-sparql-1-1-adjust';
 import type * as T12 from '@traqula/rules-sparql-1-2';
-import { gram as gram12, completeParseContext, copyParseContext } from '@traqula/rules-sparql-1-2';
-import type { Query, QueryConstruct, SparqlQuery } from './astTypes';
-import { sparqlNextLexerBuilder } from './lexer';
+import { completeParseContext, copyParseContext, gram as gram12 } from '@traqula/rules-sparql-1-2';
+import type { PatternLateral, Query, QueryConstruct, SparqlQuery } from './astTypes';
+import { lateral, sparqlNextLexerBuilder } from './lexer';
 import type { SparqlGrammarRule12 } from './types';
 
 /**
@@ -101,6 +102,12 @@ SparqlGrammarRule12<typeof constructQuery12['name'], Omit<QueryConstruct, gram11
   },
 };
 
+// ===============================
+// ========== LATERAL ============
+// ===============================
+// Grammatically, LATERAL behaves like a group graph pattern prefixed with the LATERAL keyword,
+// so it plugs into `graphPatternNotTriples` next to OPTIONAL, MINUS, UNION, ... .
+
 const origGraphPatternNotTriplesParserRule = sparql12ParserBuilder
   .getRule('graphPatternNotTriples');
 const origGraphPatternNotTriplesGeneratorRule = sparql12GeneratorBuilder
@@ -110,7 +117,13 @@ const origGroupGraphPatternParserRule = sparql12ParserBuilder
 const origGroupGraphPatternGeneratorRule = sparql12GeneratorBuilder
   .getRule('groupGraphPattern');
 
-export const graphPatternNotTriples: T11.SparqlRule<
+/**
+ * Patched [`GraphPatternNotTriples`](https://www.w3.org/TR/sparql12-query/#rGraphPatternNotTriples)
+ * that additionally recognizes the SPARQL Next `LATERAL` pattern. The added alternative is tried
+ * first (via `OR2` to avoid clashing with the internal `OR` of the original rule); if the `LATERAL`
+ * keyword is not present, we fall through to the original SPARQL 1.2 implementation.
+ */
+export const graphPatternNotTriples: T12.SparqlRule<
   typeof origGraphPatternNotTriplesParserRule['name'],
   RuleDefReturn<typeof origGraphPatternNotTriplesParserRule> | PatternLateral
 > = {
@@ -128,7 +141,12 @@ export const graphPatternNotTriples: T11.SparqlRule<
   },
 };
 
-export const lateralGraphPattern: T11.SparqlRule<'lateralGraphPattern', PatternLateral> = {
+/**
+ * [`LateralGraphPattern`](https://github.com/w3c-cg/sparql-dev/blob/main/SEP/SEP-0006/sep-0006.md):
+ * `'LATERAL' GroupGraphPattern`. Parses into a {@link PatternLateral} and regenerates the
+ * `LATERAL { ... }` surface syntax.
+ */
+export const lateralGraphPattern: T12.SparqlRule<'lateralGraphPattern', PatternLateral> = {
   name: 'lateralGraphPattern',
   impl: ({ CONSUME, SUBRULE, ACTION }) => (C) => {
     const token = CONSUME(lateral);
@@ -142,7 +160,8 @@ export const lateralGraphPattern: T11.SparqlRule<'lateralGraphPattern', PatternL
   },
   gImpl: ({ SUBRULE, PRINT_WORD }) => (ast, { astFactory: F }) => {
     F.printFilter(ast, () => PRINT_WORD('LATERAL'));
-    SUBRULE(origGroupGraphPatternGeneratorRule, F.patternGroup(<T11.Pattern[]> ast.patterns, ast.loc));
+    const group = F.patternGroup(<Parameters<typeof F.patternGroup>[0]> ast.patterns, ast.loc);
+    SUBRULE(origGroupGraphPatternGeneratorRule, group);
   },
 };
 
@@ -159,6 +178,11 @@ export const sparqlNextParserBuilder = ParserBuilder
   .deleteRule('constructTriples')
   .deleteRule('constructTemplate')
   .patchRule(constructQuery)
+  .addRule(lateralGraphPattern)
+  .patchRule(graphPatternNotTriples);
+
+export const sparqlNextGeneratorBuilder = GeneratorBuilder
+  .create(sparql12GeneratorBuilder)
   .addRule(lateralGraphPattern)
   .patchRule(graphPatternNotTriples);
 
@@ -194,7 +218,3 @@ export class SparqlNextParser {
     return ast;
   }
 }
-
-export const lateralGeneratorBuilder = GeneratorBuilder.create(sparql12GeneratorBuilder)
-  .addRule(lateralGraphPattern)
-  .patchRule(graphPatternNotTriples);

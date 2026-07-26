@@ -1,17 +1,17 @@
-import { toAlgebra12Builder } from '@traqula/algebra-sparql-1-2';
+import { toAlgebra12Builder, toAst12Builder } from '@traqula/algebra-sparql-1-2';
 import type {
   Algebra,
   AlgebraIndir,
+  AstIndir,
   ContextConfigs,
   FlattenedTriple,
 } from '@traqula/algebra-transformations-1-2';
-import { createAlgebraContext } from '@traqula/algebra-transformations-1-2';
+import { createAlgebraContext, createAstContext } from '@traqula/algebra-transformations-1-2';
 import type { Patch } from '@traqula/core';
 import { IndirBuilder } from '@traqula/core';
+import { findPatternBoundedVars } from '@traqula/rules-sparql-1-1';
 import type * as T12 from '@traqula/rules-sparql-1-2';
-import type { Query, SparqlQuery } from './astTypes';
-
-export { toAst } from '@traqula/algebra-sparql-1-2';
+import type { Pattern, PatternLateral, Query, SparqlQuery } from './astTypes';
 
 const translateBasicGraphPattern = toAlgebra12Builder.getRule('translateBasicGraphPattern');
 /**
@@ -87,103 +87,150 @@ AlgebraIndir<typeof translateAggregates['name'], Algebra.Operation, [Query, Alge
   },
 };
 
-const toAlgebraBuilder = IndirBuilder
-  .create(toAlgebra12Builder)
-  .patchRule(translateBasicGraphPatternWithGraph)
-  .patchRule(translateAggregatesQuadTemplate);
+// ===========================================================================
+// ============================= LATERAL =====================================
+// ===========================================================================
+// The `LATERAL` operator (SEP-0006) evaluates its right-hand side once for every
+// solution of its left-hand side, with those left-hand solutions injected as if
+// they were fixed. It has no counterpart in the base SPARQL 1.2 algebra, so we
+// introduce a dedicated {@link Lateral} algebra node and teach both the AST→algebra
+// and algebra→AST translations about it.
 
 /**
- * Translates a SPARQL Next AST to SPARQL Algebra.
- *
- * Behaves like {@link toAlgebra} from `@traqula/algebra-sparql-1-2`, but additionally
- * supports `GRAPH` blocks inside CONSTRUCT templates: the graph named in the
- * template is used as the graph of the corresponding CONSTRUCT quads.
+ * Algebra node produced for a SPARQL Next `LATERAL` pattern. `input[0]` is the
+ * left-hand side (evaluated first) and `input[1]` is the right-hand side that is
+ * (re-)evaluated for each left-hand solution.
  */
-export function toAlgebra(query: SparqlQuery, options: ContextConfigs = {}): Algebra.Operation {
-  const c = createAlgebraContext(options);
-  const transformer = toAlgebraBuilder.build();
-  return transformer.translateQuery(c, <T12.SparqlQuery> <unknown> query, options.quads, options.blankToVariable);
+export type Lateral = {
+  type: 'lateral';
+  input: [Algebra.Operation, Algebra.Operation];
+};
+
+// ---------------------------------------------------------------------------
+// toAlgebra (AST -> Algebra)
+// ---------------------------------------------------------------------------
+
+const origTranslateGraphPattern = toAlgebra12Builder.getRule('translateGraphPattern');
+const origAccumulateGroupGraphPattern = toAlgebra12Builder.getRule('accumulateGroupGraphPattern');
+const origInScopeVariables = toAlgebra12Builder.getRule('inScopeVariables');
+
+/**
+ * A structural view of an AST node that is enough to walk the pattern tree
+ * looking for `LATERAL` patterns without depending on the concrete AST shape.
+ */
+interface WalkableAstNode {
+  type?: unknown;
+  subType?: unknown;
+  patterns?: unknown;
+  where?: unknown;
 }
 
-// ToAlgebra
-
-const origTranslateGraphPattern = toAlgebra11Builder.getRule('translateGraphPattern');
-const origAccumulateGroupGraphPattern = toAlgebra11Builder.getRule('accumulateGroupGraphPattern');
-const origInScopeVariables = toAlgebra11Builder.getRule('inScopeVariables');
-
 /**
- * Walk the AST pattern tree to find lateral patterns and collect the variables
- * they introduce. This is needed because `findPatternBoundedVars` in the base
- * SPARQL 1.1 library doesn't know about the custom 'lateral' subType.
+ * Recursively walk an AST (sub)tree, collect the variables that any `LATERAL`
+ * pattern introduces, and add them to `boundedVars`. This is needed because
+ * {@link findPatternBoundedVars} from the base SPARQL 1.1 library does not know
+ * about the custom `lateral` subType and would otherwise miss variables bound
+ * inside a `LATERAL` block (e.g. when expanding `SELECT *`).
  */
-function addLateralBoundedVars(op: any, vars: Set<string>): void {
-  if (!op || typeof op !== 'object') {
+function collectLateralBoundedVars(node: unknown, boundedVars: Set<string>): void {
+  if (node === null || typeof node !== 'object') {
     return;
   }
-  if (Array.isArray(op)) {
-    for (const item of op) {
-      addLateralBoundedVars(item, vars);
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      collectLateralBoundedVars(item, boundedVars);
     }
     return;
   }
-  if (op.type === 'pattern' && op.subType === 'lateral') {
-    // Found a lateral pattern – collect variables from its body
-    findPatternBoundedVars(op.patterns, vars);
-    // Also recurse to discover nested lateral patterns inside this body
-    addLateralBoundedVars(op.patterns, vars);
-  } else if (op.patterns) {
-    // Recurse into other pattern containers (group, union, optional, …)
-    addLateralBoundedVars(op.patterns, vars);
-  } else if (op.where) {
-    // Handle SELECT query objects: the WHERE clause is in op.where, not op.patterns
-    addLateralBoundedVars(op.where, vars);
+  const record = <WalkableAstNode> node;
+  if (record.type === 'pattern' && record.subType === 'lateral') {
+    // A LATERAL pattern: collect the variables bound by its body...
+    findPatternBoundedVars(<Parameters<typeof findPatternBoundedVars>[0]> record.patterns, boundedVars);
+    // ...and recurse to also discover any nested LATERAL patterns inside it.
+    collectLateralBoundedVars(record.patterns, boundedVars);
+  } else {
+    // Recurse into other pattern containers (group, union, optional, graph, ...) and into
+    // query bodies (kept under `where`). Missing fields resolve to `undefined` and stop the walk.
+    collectLateralBoundedVars(record.patterns, boundedVars);
+    collectLateralBoundedVars(record.where, boundedVars);
   }
 }
 
-export const inScopeVariablesWithLateral: AlgebraIndir<'inScopeVariables', Set<string>, [any]> = {
+type InScopeInput = T12.SparqlQuery | T12.TripleNesting | T12.TripleCollection | T12.Path | T12.Term;
+
+/**
+ * Patched `inScopeVariables` that additionally accounts for the variables bound
+ * inside `LATERAL` patterns, so that wildcard projections (`SELECT *`) covering a
+ * `LATERAL` block expose those variables.
+ */
+export const inScopeVariablesWithLateral: AlgebraIndir<'inScopeVariables', Set<string>, [InScopeInput]> = {
   name: 'inScopeVariables',
-  fun: ($: any) => (C: any, thingy: any): Set<string> => {
-    const vars: Set<string> = origInScopeVariables.fun($)(C, thingy);
-    addLateralBoundedVars(thingy, vars);
+  fun: $ => (c, thingy) => {
+    const vars = origInScopeVariables.fun($)(c, thingy);
+    collectLateralBoundedVars(thingy, vars);
     return vars;
   },
 };
 
-export const accumulateGroupGraphPattern: AlgebraIndir<'accumulateGroupGraphPattern', Algebra.Operation | Lateral, [Algebra.Operation, Pattern]> = {
+/**
+ * Patched `accumulateGroupGraphPattern` that turns a `LATERAL` pattern into a
+ * {@link Lateral} algebra node whose left input is everything accumulated so far
+ * in the enclosing group and whose right input is the translation of the
+ * `LATERAL` body. All other patterns are handled by the original implementation.
+ */
+export const accumulateGroupGraphPattern: AlgebraIndir<
+  'accumulateGroupGraphPattern',
+  Algebra.Operation | Lateral,
+  [Algebra.Operation, Pattern]
+> = {
   name: 'accumulateGroupGraphPattern',
-  fun: $ => (C, algebraOp, pattern) => {
-    // If the subtype is lateral, handle it, otherwise fall though to the original implementation
+  fun: $ => (c, algebraOp, pattern) => {
     if (pattern.subType === 'lateral') {
       return {
         type: 'lateral',
         input: [
           algebraOp,
-          $.SUBRULE(origTranslateGraphPattern, C.astFactory.patternGroup(<never[]> pattern.patterns, pattern.loc)),
+          $.SUBRULE(
+            origTranslateGraphPattern,
+            c.astFactory.patternGroup(<Parameters<typeof c.astFactory.patternGroup>[0]> pattern.patterns, pattern.loc),
+          ),
         ],
       } satisfies Lateral;
     }
-    return origAccumulateGroupGraphPattern.fun($)(C, algebraOp, pattern);
+    return origAccumulateGroupGraphPattern.fun($)(c, algebraOp, pattern);
   },
 };
 
-// FromAlgebra
-const origTranslateAlgPatternNew = toAst11Builder.getRule('translatePatternNew');
-const origOperationAlgInputAsPatternList = toAst11Builder.getRule('operationInputAsPatternList');
+// ---------------------------------------------------------------------------
+// toAst (Algebra -> AST)
+// ---------------------------------------------------------------------------
 
+const origTranslateAlgPatternNew = toAst12Builder.getRule('translatePatternNew');
+const origOperationAlgInputAsPatternList = toAst12Builder.getRule('operationInputAsPatternList');
+
+/**
+ * Patched `translatePatternNew` that routes {@link Lateral} algebra nodes to
+ * {@link translateAlgLateral} and delegates everything else to the original
+ * implementation.
+ */
 export const translateAlgPatternNewReplace: AstIndir<
   (typeof origTranslateAlgPatternNew)['name'],
   Pattern | Pattern[],
   [Algebra.Operation | Lateral]
 > = {
   name: 'translatePatternNew',
-  fun: $ => (C, op) => {
+  fun: $ => (c, op) => {
     if (op.type === 'lateral') {
       return $.SUBRULE(translateAlgLateral, op);
     }
-    return origTranslateAlgPatternNew.fun($)(C, op);
+    return origTranslateAlgPatternNew.fun($)(c, op);
   },
 };
 
+/**
+ * Translate a {@link Lateral} algebra node back into AST: the left input becomes
+ * regular pattern(s) and the right input becomes a {@link PatternLateral}.
+ */
 export const translateAlgLateral: AstIndir<'translateLateral', Pattern[], [Lateral]> = {
   name: 'translateLateral',
   fun: ({ SUBRULE }) => ({ astFactory: F }, op) =>
@@ -198,13 +245,45 @@ export const translateAlgLateral: AstIndir<'translateLateral', Pattern[], [Later
     ].flat(),
 };
 
-export type Pattern = T12.Pattern | PatternLateral;
-export type PatternLateral = T12.PatternBase & {
-  subType: 'lateral';
-  patterns: Pattern[];
-};
+// ---------------------------------------------------------------------------
+// Builders and public entry points
+// ---------------------------------------------------------------------------
 
-export type Lateral = {
-  type: 'lateral';
-  input: [Algebra.Operation, Algebra.Operation];
-};
+const toAlgebraBuilder = IndirBuilder
+  .create(toAlgebra12Builder)
+  .patchRule(translateBasicGraphPatternWithGraph)
+  .patchRule(translateAggregatesQuadTemplate)
+  .patchRule(accumulateGroupGraphPattern)
+  .patchRule(inScopeVariablesWithLateral);
+
+const toAstBuilder = IndirBuilder
+  .create(toAst12Builder)
+  .addRule(translateAlgLateral)
+  .patchRule(translateAlgPatternNewReplace);
+
+/**
+ * Translates a SPARQL Next AST to SPARQL Algebra.
+ *
+ * Behaves like `toAlgebra` from `@traqula/algebra-sparql-1-2`, but additionally
+ * supports `GRAPH` blocks inside CONSTRUCT templates (the graph named in the
+ * template is used as the graph of the corresponding CONSTRUCT quads) and the
+ * SPARQL Next `LATERAL` pattern (translated to a {@link Lateral} node).
+ */
+export function toAlgebra(query: SparqlQuery, options: ContextConfigs = {}): Algebra.Operation {
+  const c = createAlgebraContext(options);
+  const transformer = toAlgebraBuilder.build();
+  return transformer.translateQuery(c, <T12.SparqlQuery> <unknown> query, options.quads, options.blankToVariable);
+}
+
+/**
+ * Translates SPARQL Algebra back to a SPARQL Next AST.
+ *
+ * Behaves like `toAst` from `@traqula/algebra-sparql-1-2`, but additionally
+ * supports the {@link Lateral} algebra node, regenerating it as a `LATERAL`
+ * pattern.
+ */
+export function toAst(op: Algebra.Operation): SparqlQuery {
+  const c = createAstContext();
+  const transformer = toAstBuilder.build();
+  return <SparqlQuery> <unknown> transformer.algToSparql(c, op);
+}

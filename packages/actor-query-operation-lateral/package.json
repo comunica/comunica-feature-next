@@ -1,5 +1,5 @@
 {
-  "name": "@local/actor-query-operation-lateral",
+  "name": "@comunica/actor-query-operation-lateral",
   "version": "5.1.3",
   "private": "true",
   "description": "A lateral query-operation actor",

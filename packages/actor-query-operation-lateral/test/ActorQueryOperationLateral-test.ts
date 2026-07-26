@@ -1,5 +1,4 @@
 import { ActorQueryOperation } from '@comunica/bus-query-operation';
-import type { IActionRdfMetadataAccumulate, MediatorRdfMetadataAccumulate } from '@comunica/bus-rdf-metadata-accumulate';
 import { KeysInitQuery } from '@comunica/context-entries';
 import { ActionContext, Bus } from '@comunica/core';
 import type { IActionContext, IQueryOperationResultBindings } from '@comunica/types';
@@ -9,7 +8,7 @@ import { getSafeBindings } from '@comunica/utils-query-operation';
 import { ArrayIterator } from 'asynciterator';
 import { DataFactory } from 'rdf-data-factory';
 import type { Lateral } from '../lib/ActorQueryOperationLateral';
-import { ActorQueryOperationLateral } from '../lib/ActorQueryOperationLateral';
+import { ActorQueryOperationLateral, lateralDisableKey } from '../lib/ActorQueryOperationLateral';
 import '@comunica/utils-jest';
 import 'jest-rdf';
 
@@ -20,7 +19,6 @@ describe('ActorQueryOperationLateral', () => {
   let context: IActionContext;
   let bus: any;
   let mediatorQueryOperation: any;
-  let mediatorRdfMetadataAccumulate: MediatorRdfMetadataAccumulate;
   let op3: () => any;
   let op2: () => any;
   let op2Undef: () => any;
@@ -41,38 +39,6 @@ describe('ActorQueryOperationLateral', () => {
           type: 'bindings',
           variables: arg.operation.variables,
         };
-      },
-    };
-    mediatorRdfMetadataAccumulate = <any> {
-      async mediate(action: IActionRdfMetadataAccumulate) {
-        if (action.mode === 'initialize') {
-          return { metadata: { cardinality: { type: 'exact', value: 0 }}};
-        }
-
-        const metadata = { ...action.accumulatedMetadata };
-        const subMetadata = action.appendingMetadata;
-        if (!subMetadata.cardinality || !Number.isFinite(subMetadata.cardinality.value)) {
-          // We're already at infinite, so ignore any later metadata
-          metadata.cardinality.type = 'estimate';
-          metadata.cardinality.value = Number.POSITIVE_INFINITY;
-        } else {
-          if (subMetadata.cardinality.type === 'estimate') {
-            metadata.cardinality.type = 'estimate';
-          }
-          metadata.cardinality.value += subMetadata.cardinality.value;
-        }
-        if (metadata.requestTime ?? subMetadata.requestTime) {
-          metadata.requestTime = metadata.requestTime ?? 0;
-          subMetadata.requestTime = subMetadata.requestTime ?? 0;
-          metadata.requestTime += subMetadata.requestTime;
-        }
-        if (metadata.pageSize ?? subMetadata.pageSize) {
-          metadata.pageSize = metadata.pageSize ?? 0;
-          subMetadata.pageSize = subMetadata.pageSize ?? 0;
-          metadata.pageSize += subMetadata.pageSize;
-        }
-
-        return { metadata };
       },
     };
     op3 = () => ({
@@ -116,26 +82,26 @@ describe('ActorQueryOperationLateral', () => {
     });
   });
 
-  describe('The ActorQueryOperationUnion module', () => {
+  describe('The ActorQueryOperationLateral module', () => {
     it('should be a function', () => {
       expect(ActorQueryOperationLateral).toBeInstanceOf(Function);
     });
 
-    it('should be a ActorQueryOperationUnion constructor', () => {
+    it('should be an ActorQueryOperationLateral constructor', () => {
       expect(new (<any> ActorQueryOperationLateral)({ name: 'actor', bus, mediatorQueryOperation }))
         .toBeInstanceOf(ActorQueryOperationLateral);
       expect(new (<any> ActorQueryOperationLateral)({ name: 'actor', bus, mediatorQueryOperation }))
         .toBeInstanceOf(ActorQueryOperation);
     });
 
-    it('should not be able to create new ActorQueryOperationUnion objects without \'new\'', () => {
+    it('should not be able to create new ActorQueryOperationLateral objects without \'new\'', () => {
       expect(() => {
         (<any> ActorQueryOperationLateral)();
       }).toThrow(`Class constructor ActorQueryOperationLateral cannot be invoked without 'new'`);
     });
   });
 
-  describe('An ActorQueryOperationUnion instance', () => {
+  describe('An ActorQueryOperationLateral instance', () => {
     let actor: ActorQueryOperationLateral;
 
     beforeEach(() => {
@@ -144,7 +110,7 @@ describe('ActorQueryOperationLateral', () => {
       );
     });
 
-    it('should test on union', async() => {
+    it('should test on lateral', async() => {
       const input = [ op3(), op2() ];
       await expect(actor.test(<any> {
         operation: { type: 'lateral', input },
@@ -155,7 +121,18 @@ describe('ActorQueryOperationLateral', () => {
       }
     });
 
-    it('should not test on non-union', async() => {
+    it('should not test when the actor is disabled via the context', async() => {
+      const input = [ op3(), op2() ];
+      await expect(actor.test(<any> {
+        operation: { type: 'lateral', input },
+        context: context.set(lateralDisableKey, true),
+      })).resolves.toFailTest('');
+      for (const op of input) {
+        op.stream.destroy();
+      }
+    });
+
+    it('should not test on non-lateral', async() => {
       const input = [ op3(), op2() ];
       await expect(actor.test(<any> {
         operation: { type: 'some-other-type', input },
@@ -213,6 +190,47 @@ describe('ActorQueryOperationLateral', () => {
       ]);
     });
 
+    it('should keep exact cardinality, dedupe shared variables and skip conflicting merges', async() => {
+      // LHS and RHS both bind ?a (shared variable) and both have exact cardinality.
+      const opExactA: () => any = () => ({
+        metadata: () => Promise.resolve({
+          state: new MetadataValidationState(),
+          cardinality: { type: 'exact', value: 2 },
+          variables: [{ variable: DF.variable('a'), canBeUndef: false }],
+        }),
+        stream: new ArrayIterator([
+          BF.bindings([[ DF.variable('a'), DF.literal('1') ]]),
+          BF.bindings([[ DF.variable('a'), DF.literal('2') ]]),
+        ], { autoStart: false }),
+        type: 'bindings',
+      });
+      const opExactAOne: () => any = () => ({
+        metadata: () => Promise.resolve({
+          state: new MetadataValidationState(),
+          cardinality: { type: 'exact', value: 1 },
+          variables: [{ variable: DF.variable('a'), canBeUndef: false }],
+        }),
+        stream: new ArrayIterator([
+          BF.bindings([[ DF.variable('a'), DF.literal('1') ]]),
+        ], { autoStart: false }),
+        type: 'bindings',
+      });
+      const op: { operation: Lateral; context: IActionContext } =
+        { operation: { type: 'lateral', input: [ opExactA(), opExactAOne() ]}, context };
+      const output = getSafeBindings(await actor.run(op, undefined));
+      // Both cardinalities exact -> exact; the shared ?a is not duplicated.
+      await expect(output.metadata()).resolves.toMatchObject({
+        cardinality: { type: 'exact', value: 2 },
+        variables: [
+          { variable: DF.variable('a'), canBeUndef: false },
+        ],
+      });
+      // Only the non-conflicting merge (?a=1 with ?a=1) survives; ?a=2 with ?a=1 conflicts and is skipped.
+      await expect(output.bindingsStream).toEqualBindingsStream([
+        BF.bindings([[ DF.variable('a'), DF.literal('1') ]]),
+      ]);
+    });
+
     it('should run on two bindings streams with metadata invalidation', async() => {
       // An operation in which we can access the metadata state
       const state = new MetadataValidationState();
@@ -257,6 +275,31 @@ describe('ActorQueryOperationLateral', () => {
           { variable: DF.variable('b'), canBeUndef: true },
         ],
       });
+    });
+
+    it('should invalidate its metadata when the left-hand side metadata is invalidated', async() => {
+      // A left-hand side operation in which we can access the metadata state
+      const state = new MetadataValidationState();
+      const opCustom = {
+        metadata: () => Promise.resolve({
+          state,
+          cardinality: { type: 'estimate', value: 3 },
+          variables: [{ variable: DF.variable('a'), canBeUndef: false }],
+        }),
+        stream: new ArrayIterator([
+          BF.bindings([[ DF.variable('a'), DF.literal('1') ]]),
+        ], { autoStart: false }),
+        type: 'bindings',
+      };
+
+      const op: any = { operation: { type: 'lateral', input: [ opCustom, op2() ]}, context };
+      const output: IQueryOperationResultBindings = <any> await actor.run(op, undefined);
+      const outputMetadata = await output.metadata();
+      expect(outputMetadata.state.valid).toBeTruthy();
+
+      // Invalidating the LHS state should invalidate the combined metadata state.
+      state.invalidate();
+      expect(outputMetadata.state.valid).toBeFalsy();
     });
   });
 });

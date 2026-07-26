@@ -24,7 +24,7 @@ export type Lateral = {
   input: [Algebra.Operation, Algebra.Operation];
 };
 
-export const lateralDisableKey = new ActionContextKey<boolean>('@local/actor-query-operation-lateral:disable');
+export const lateralDisableKey = new ActionContextKey<boolean>('@comunica/actor-query-operation-lateral:disable');
 
 /**
  * A comunica lateral Query Operation Actor.
