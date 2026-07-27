@@ -71,7 +71,7 @@
     "spec:prot-1-1": "yarn run spec:base-1-1 -s http://www.w3.org/TR/sparql11-protocol/",
     "spec:graphstore-1-1": "yarn run spec:base-1-1 -s http://www.w3.org/TR/sparql11-http-rdf-update/",
     "spec:sparql12-xsd-datetime-duration": "node ../../node_modules/rdf-test-suite/bin/Runner.js spec/sparql-engine.js https://raw.githubusercontent.com/kasei/sparql-12/xsd_datetime_duration/tests/xsd_functions/manifest.ttl -c ../../.rdf-test-suite-cache/",
-    "spec:lateral": "node ../../node_modules/rdf-test-suite/bin/Runner.js spec/sparql-engine.js https://raw.githubusercontent.com/apache/jena/main/jena-arq/testing/ARQ/Lateral/manifest.ttl#manifest -c ../../.rdf-test-suite-cache/ --skip \"(lateral-1|lateral-4|lateral-5|lateral-6)\"",
+    "spec:lateral": "node ../../node_modules/rdf-test-suite/bin/Runner.js spec/sparql-engine.js https://raw.githubusercontent.com/apache/jena/main/jena-arq/testing/ARQ/Lateral/manifest.ttl#manifest -c ../../.rdf-test-suite-cache/ --skip \"(lateral-1|lateral-6)\"",
     "spec": "yarn run spec:query-1-1 && yarn run spec:update-1-1 && yarn run spec:sparql12-xsd-datetime-duration && yarn run spec:query-1-2 && yarn run spec:lateral",
     "spec-earl": "yarn run spec:query -o earl -p spec/earl-meta.json > earl.ttl",
     "integration": "rdf-test-suite-ldf spec/sparql-engine.js https://comunica.github.io/manifest-ldf-tests/sparql-next/next-manifest.ttl -d 200000 -c ../../.rdf-test-suite-ldf-cache/",
